@@ -1,0 +1,165 @@
+---
+title: "Aircraft Wildlife collisions"
+author: "Alexander Flick & Vy Nguyen"
+date: "21/07/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Task 1
+
+Do a PCA for a dataset with 2 or 3 groups (The dataset should have at least 4 continuous variables). The aim is to compare the results of the PCA analyses for the groups. You may consider for example:
+
+* the swiss bank notes (split by Status) - the dataset bank is in package gclus  
+* the iris data (split by Species) - the dataset iris is available by default  
+* the credit card data (split by card) - the dataset CreditCard is in AER
+
+Document your analysis in an R Markdown file. (It should be setup in a way that I can rerun your analysis). To perform your analysis:
+
+* Do use ggplot2 for graphs. **Display your results for the 2 or 3 groups** (e.g. in side by side panels). Do also modify the default colors used in plots.  
+* Start of your analysis: Try out some of the plot types in ggplot2 (for example histogram, density and boxplot).  
+* Your principal component analysis: Create scree plots of the eigenvalues and calculated the percentage of variance explained by the first 2 or 3 PCs. Provide also scatterplots (or scatterplot matrices) of the first 3 PCs. Discuss the dimensionality of your datasets (splitted into the groups) and also the differences if the PCA is based on the original (centered) data or the standardized data.  
+* Submit your report in both .Rmd and .pdf format.
+
+\newpage
+
+### Iris data plots  
+
+```{r echo=FALSE, message=FALSE}
+library(ggplot2)
+library(patchwork)
+library(gclus)
+```
+
+To start the analysis we can, for example, plot the Petal Width (in cm), Length (in cm) and the Sepal Length (in cm) of the flowers split by the Species. We will visualize this with a density plot, a histogram and a boxplot.
+
+```{r echo=FALSE, fig.asp=1}
+theme_set(theme_classic())
+color_pal<-c("seagreen", "steelblue", "darkred")
+theme.title<-theme(
+    plot.title = element_text(
+      hjust = 0.5, # center
+      size = 12,
+      color = "steelblue",
+      face = "bold"
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5, # center
+      size = 10,
+      color = "gray",
+      face = "italic"
+    )
+  )
+
+dp<-ggplot(iris) +
+   aes(x=Petal.Width, color=Species, fill=Species) +
+   geom_density(alpha=0.25) + 
+   theme(legend.position = "none") +
+   scale_color_manual(values = color_pal) + 
+   scale_fill_manual(values = color_pal)
+
+bp<-ggplot(iris) +
+  aes(x=Petal.Width, y=Species, fill=Species, color=Species) +
+  stat_boxplot(geom="errorbar",width=0.2) +
+  geom_boxplot(varwidth = TRUE, alpha=0.2) + 
+  geom_jitter(alpha = 0.25, width = 0.2) +
+  theme(legend.position = "none") +
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal)
+
+h<-ggplot(iris) +
+  aes(x=Petal.Width, color=Species, fill=Species) +
+  geom_histogram(bins=30, alpha=0.25) + 
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal)
+
+dpl<-ggplot(iris) +
+   aes(x=Petal.Length, color=Species, fill=Species) +
+   geom_density(alpha=0.25) + 
+   theme(legend.position = "none") +
+   scale_color_manual(values = color_pal) + 
+   scale_fill_manual(values = color_pal)
+
+bpl<-ggplot(iris) +
+  aes(y=Petal.Length, x=Species, fill=Species, color=Species) +
+  stat_boxplot(geom="errorbar",width=0.2) +
+  geom_boxplot(varwidth = TRUE, alpha=0.2) + 
+  theme(legend.position = "none") +
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal)
+
+sp<-ggplot(iris) +
+  aes(x = Petal.Length, y = Petal.Width, shape = Species, color=Species, fill=Species) +
+  geom_point() +
+  facet_wrap(~Species) +
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal) + 
+  labs(
+    title = "Petal Width and Length of 150 flowers of Iris",
+    subtitle = "In relation to their species",
+    x = "Petal Length in cm",
+    y = "Petal Width in cm"
+  ) + theme.title
+
+dps<-ggplot(iris) +
+   aes(x=Sepal.Length, color=Species, fill=Species) +
+   geom_density(alpha=0.25) + 
+   theme(legend.position = "none") +
+   scale_color_manual(values = color_pal) + 
+   scale_fill_manual(values = color_pal)
+
+hs<-ggplot(iris) +
+  aes(x=Sepal.Length, color=Species, fill=Species) +
+  geom_histogram(bins=30, alpha=0.25) + 
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal)
+
+bps<-ggplot(iris) +
+  aes(x=Sepal.Length, y=Species, fill=Species, color=Species) +
+  stat_boxplot(geom="errorbar",width=0.2) +
+  geom_boxplot(varwidth = TRUE, alpha=0.2) + 
+  geom_jitter(alpha = 0.25, width = 0.2) +
+  theme(legend.position = "none") +
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal)
+
+sps<-ggplot(iris) +
+  aes(x = Sepal.Width, y = Sepal.Length, shape = Species, color=Species, fill=Species) +
+  geom_point() +
+  facet_wrap(~Species) +
+  scale_color_manual(values = color_pal) + 
+  scale_fill_manual(values = color_pal) + 
+  labs(
+    title = "Sepal Width and Length of 150 flowers of Iris",
+    subtitle = "In relation to their species",
+    x = "Sepal Width in cm",
+    y = "Sepal Length in cm"
+  ) + theme.title
+
+(dp + h) / bp / (dpl + bpl) / sp
+sps/ (dps + hs) / bps
+```
+
+### PCA for Iris data  
+
+To do a Principal Component Analysis we will use *prcomp()* and plot the eigenvalues in a scree plot. We see that there's an elbow at 2, so we choose 2 dimensions. *iris.pca$x* has the same dimensions as *X*.  
+
+```{r }
+X<-iris[,1:4]             ## exclude the Species column
+S <- cov(X)               ## compute variance-covariance matrix 
+iris.pca <- prcomp(X)     ## perform PCA
+lambda <- eigen(S)$values ## calculate eigenvalues
+```
+
+```{r echo=FALSE}
+## scree plot
+plot(lambda/sum(lambda),                        ## or instead of lambda: iris.pca$sdev^2
+    main = "Scree plot of eigenvalues in %",
+    col=c("black", "red", "black", "black"))
+lines(lambda/sum(lambda))                       ## or: iris.pca$sdev^2
+```  
