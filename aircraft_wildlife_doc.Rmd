@@ -11,36 +11,18 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Task 1
-
-Do a PCA for a dataset with 2 or 3 groups (The dataset should have at least 4 continuous variables). The aim is to compare the results of the PCA analyses for the groups. You may consider for example:
-
-* the swiss bank notes (split by Status) - the dataset bank is in package gclus  
-* the iris data (split by Species) - the dataset iris is available by default  
-* the credit card data (split by card) - the dataset CreditCard is in AER
-
-Document your analysis in an R Markdown file. (It should be setup in a way that I can rerun your analysis). To perform your analysis:
-
-* Do use ggplot2 for graphs. **Display your results for the 2 or 3 groups** (e.g. in side by side panels). Do also modify the default colors used in plots.  
-* Start of your analysis: Try out some of the plot types in ggplot2 (for example histogram, density and boxplot).  
-* Your principal component analysis: Create scree plots of the eigenvalues and calculated the percentage of variance explained by the first 2 or 3 PCs. Provide also scatterplots (or scatterplot matrices) of the first 3 PCs. Discuss the dimensionality of your datasets (splitted into the groups) and also the differences if the PCA is based on the original (centered) data or the standardized data.  
-* Submit your report in both .Rmd and .pdf format.
-
-\newpage
-
-### Iris data plots  
-
-```{r echo=FALSE, message=FALSE}
-library(ggplot2)
-library(patchwork)
-library(gclus)
-```
-
-To start the analysis we can, for example, plot the Petal Width (in cm), Length (in cm) and the Sepal Length (in cm) of the flowers split by the Species. We will visualize this with a density plot, a histogram and a boxplot.
+# Data preparation
 
 ```{r echo=FALSE, fig.asp=1}
+
+library(openintro)
+data("birds")
+library(ggplot2)
+library(patchwork)
+library(ggmosaic)
+
 theme_set(theme_classic())
-color_pal<-c("seagreen", "steelblue", "darkred")
+color_pal<-c("seagreen", "steelblue", "darkred", "orange")
 theme.title<-theme(
     plot.title = element_text(
       hjust = 0.5, # center
@@ -55,6 +37,107 @@ theme.title<-theme(
       face = "italic"
     )
   )
+
+factor_phase_flt<-c("Parked", "Taxi", "Take-off run", "Climb", "En Route", "Descent", "Approach", "Landing Roll")
+birds$phase_of_flt<-factor(birds$phase_of_flt, levels=factor_phase_flt)
+
+factor_struck<-c("0", "1", "2-10", "11-100", "Over 100")
+birds$birds_struck<-factor(birds$birds_struck, levels=factor_struck)
+
+birds$num_engs <- as.factor(birds$num_engs)
+
+#\newpage
+```
+
+## Handling missing values
+
+```{r echo=FALSE, message=FALSE}
+#get rows where birds struck is missing
+df <- birds[is.na(birds$birds_struck), c("remarks", "birds_seen", "effect", "birds_struck")]
+no_strike <- grepl("NOT A STRIKE|NO STRIKE|NOT A STRKE", df$remarks)
+# set birds_struck to 0 for "no strike"
+birds[is.na(birds$birds_struck),][no_strike,"birds_struck"] <- "0"
+
+# Amount of na for each column
+missing <- sapply(birds, function(x) sum(is.na(x)))
+
+barplot(missing)
+```
+
+# Analysis of strikes
+
+```{r echo=FALSE, fig.asp=1}
+
+above_ground <- birds[as.integer(birds$phase_of_flt)>3 & as.integer(birds$phase_of_flt)<8 & !is.na(birds$phase_of_flt),]
+height_by_phase <- ggplot(above_ground) +
+  aes(x = phase_of_flt, y = height, fill=phase_of_flt) +
+  stat_boxplot(geom="errorbar", width=0.4) +
+  geom_boxplot()
+# Heights during Descent are on average higher than 
+# hypothesis: Collisions happen more often during Descent and are therefore more prominent in the data set?
+count_phase <- ggplot(above_ground) +
+  aes(x = phase_of_flt, fill=phase_of_flt) +
+  geom_bar()
+
+height_by_phase / count_phase
+## descent and en-route are about equal 
+
+```
+
+## Closer look on En Rout and Descent
+```{r echo=TRUE, fig.asp=1}
+#plot height density for Descent and EnRoute
+ggplot(birds[birds$phase_of_flt== "Descent" | birds$phase_of_flt=="En Route",]) +
+  aes(x = height, group=phase_of_flt,fill=phase_of_flt ) +
+  geom_density(adjust=1.5,alpha=.8)
+
+#Two sample t.test for height dependent on phase of flight ("Descent" and "En Route")
+t.test(height~phase_of_flt, data = birds[as.integer(birds$phase_of_flt)>4 & as.integer(birds$phase_of_flt)<7 & !is.na(birds$phase_of_flt),])
+
+```
+
+check if clouds have an influence on effect 
+hyptohesis: clouds lead to less vision therefore the pilot might not see the birds
+
+```{r echo=FALSE, fig.asp=1}
+birds.filtered<-birds[!is.na(birds$effect) & !is.na(birds$sky),]
+birds.filtered$effectYes<-as.factor(birds.filtered$effect != "None")
+
+prop.table(table(birds.filtered$sky,birds.filtered$effectYes),1)
+mosaicplot(prop.table(table(birds.filtered$sky,birds.filtered$effectYes),1))
+
+prop.table(table(birds.filtered$sky,birds.filtered$birds_struck),1)
+
+```
+
+results show, that clouds do not have an impact on effect variable, 
+the proportion of effect=true is actually a little higher for some clouds and overcast
+
+## Analysis of effect variable
+
+```{r echo=FALSE, fig.asp=1}
+ggplot(birds.filtered[!is.na(birds.filtered$birds_struck),]) +
+  aes(x = birds_struck, fill = effectYes) +
+  geom_bar(position="fill")
+
+#comparison right? because we actually want to compare here the positive impact
+ggplot(birds.filtered) +
+  aes(x = birds_struck, fill = effect) +
+  geom_bar(position="fill")
+
+#mosaic in ggplot2
+#https://xang1234.github.io/mosaicdiagrams/
+
+#mosaic plot better than barplot visualizes also absolute differences
+ggplot(birds.filtered[!is.na(birds.filtered$ac_mass),]) +
+  geom_mosaic(aes(x = product(ac_mass), fill=effectYes))
+
+# Most collisions during the day #genauer betrachten
+ggplot(birds) + 
+  aes(x=time_of_day, fill=birds_struck) + 
+  geom_bar()
+
+```
 
 dp<-ggplot(iris) +
    aes(x=Petal.Width, color=Species, fill=Species) +
@@ -143,7 +226,7 @@ sps<-ggplot(iris) +
 
 (dp + h) / bp / (dpl + bpl) / sp
 sps/ (dps + hs) / bps
-```
+
 
 ### PCA for Iris data  
 
