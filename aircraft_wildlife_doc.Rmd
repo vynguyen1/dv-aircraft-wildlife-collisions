@@ -70,6 +70,10 @@ birds[is.na(birds$birds_struck),][no_strike,"birds_struck"] <- "0"
 
 #TODO: get ac mass and num_engs from aircraft model
 
+sum(is.na(birds$atype)) #0
+birds[,c("atype", "num_engs", "ac_mass")]
+sapply(birds[,c("atype", "num_engs", "ac_mass")], function(x) sum(is.na(x)))
+
 # Amount of na for each column
 missing <- sapply(birds, function(x) sum(is.na(x)))
 missing_df <- data.frame("column" = names(missing), 
@@ -102,15 +106,22 @@ count_phase <- ggplot(above_ground) +
 height_by_phase / count_phase
 ## descent and en-route are about equal 
 
+which(birds$height==max(birds$height, na.rm = T))
+birds[15053,] # >30000 foot (1 meter = 3,28084 foot)
+?birds
 ```
 
 ## Closer look on En Rout and Descent
-```{r echo=TRUE, fig.asp=1}
+```{r echo=TRUE, fig.asp=0.5}
 #plot height density for Descent and EnRoute
 ggplot(birds[birds$phase_of_flt== "Descent" | birds$phase_of_flt=="En Route",]) +
   aes(x = height, group=phase_of_flt,fill=phase_of_flt ) +
   geom_density(adjust=1.5,alpha=.8)
 
+```
+
+t.test
+```{r echo=TRUE, fig.asp=1}
 #Two sample t.test for height dependent on phase of flight ("Descent" and "En Route")
 t.test(height~phase_of_flt, data = birds[as.integer(birds$phase_of_flt)>4 & as.integer(birds$phase_of_flt)<7 & !is.na(birds$phase_of_flt),])
 
@@ -118,7 +129,7 @@ t.test(height~phase_of_flt, data = birds[as.integer(birds$phase_of_flt)>4 & as.i
 
 
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
 #relationship of amount of birds struck with clouds?
 birds$effectYes<- as.factor(birds$effect != "None")
 birds.filtered<-birds[!is.na(birds$effect) & !is.na(birds$sky),]
@@ -135,7 +146,7 @@ for birdsstruck by sky we can see that with increasing amount of birds the sky t
 
 there are only 2 levels in the data available for birds seen
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
 #relationship of amount of birds seen with clouds?
 table(birds$birds_seen)
 
@@ -147,7 +158,7 @@ ggplot(birds.filtered[!is.na(birds.filtered$birds_seen),])+
 
 the proportion of some clouds is nearly the same, but pilots do more often see bigger groups of birds (11-100) when its overcast compared to small groups
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
 #relationship of amount of birds seen with daytime?
 table(birds$birds_seen)
 
@@ -156,29 +167,53 @@ ggplot(birds.filtered[!is.na(birds.filtered$birds_seen) & !is.na(birds.filtered$
   aes(x=birds_seen, fill=time_of_day)+
   geom_bar(position = "fill")
 ```
-## Birds struck out of birds seen
+check speed
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
+# does speed has an influence on seen? the faster the less likely to see ?
+spineplot(birds$speed, as.factor(is.na(birds$birds_seen)))
+```
+The higher the speed, the less likely to see a bird
+
+### Birds struck out of birds seen
+
+```{r echo=FALSE, fig.asp=0.5}
 #Create new column
 #calculate only when seen is not na
 df <- birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]
+table(birds$birds_seen, birds$birds_struck)
+
+df$birds_struck <- factor(df$birds_struck) 
+
+#mosaic plot better than barplot visualizes also absolute differences
+ggplot(df) +
+  geom_mosaic(aes(x = product( birds_struck,birds_seen ), fill=birds_struck))
 ```
 
-check speed
+```{r echo=FALSE, fig.asp=0.5}
+#Create new column
+#calculate only when seen is not na
+df <- birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]
+table(birds$birds_seen, birds$birds_struck)
 
-```{r echo=FALSE, fig.asp=1}
-# does speed has an influence on seen? the faster the less likely to see ?
+df$birds_struck <- factor(df$birds_struck) 
 
-spineplot(birds$speed, as.factor(is.na(birds$birds_seen)))
+levels(df$birds_seen)
+levels(df$birds_struck)
+df$difference_seen_strike <- as.integer(df$birds_struck) < as.integer(df$birds_seen)+2
+table(df$difference_seen_strike)
 
+barplot(prop.table(table(df$difference_seen_strike,df$effectYes),2))
 
+ggplot(df) +
+  aes(x=difference_seen_strike, fill=effectYes) +
+  geom_bar()
 ```
-The higher the speed, the less likely to see a bird
 
 
 ## Analysis of effect variable
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
 ggplot(birds.filtered[!is.na(birds.filtered$birds_struck),]) +
   aes(x = birds_struck, fill = effectYes) +
   geom_bar(position="fill")
@@ -205,7 +240,7 @@ ggplot(birds) +
 check if clouds have an influence on effect 
 hyptohesis: clouds lead to less vision therefore the pilot might not see the birds
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
 prop.table(table(birds.filtered$sky,birds.filtered$effectYes),1)
 ggplot(birds[!is.na(birds$effect) & !is.na(birds$sky),])+
   aes(x=sky, fill=effectYes)+
@@ -217,7 +252,7 @@ the proportion of effect=true is a little higher for some clouds and overcast
 
 check influence of birds seen on effect variable, we assume NA values as if no birds have been seen before the strike occured
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
 #anteil der effect=true vergleichen when seen and not seen
 #...
 effectYes_seen <- ggplot(birds[!is.na(birds$effectYes),]) +
@@ -232,113 +267,4 @@ effect_seen <- ggplot(birds[!is.na(birds$effect) & birds$effect != "None" ,]) +
 effectYes_seen + effect_seen
 
 ```
-
 proportion of effect is a little higher when birds were seen
-
-dp<-ggplot(iris) +
-   aes(x=Petal.Width, color=Species, fill=Species) +
-   geom_density(alpha=0.25) + 
-   theme(legend.position = "none") +
-   scale_color_manual(values = color_pal) + 
-   scale_fill_manual(values = color_pal)
-
-bp<-ggplot(iris) +
-  aes(x=Petal.Width, y=Species, fill=Species, color=Species) +
-  stat_boxplot(geom="errorbar",width=0.2) +
-  geom_boxplot(varwidth = TRUE, alpha=0.2) + 
-  geom_jitter(alpha = 0.25, width = 0.2) +
-  theme(legend.position = "none") +
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal)
-
-h<-ggplot(iris) +
-  aes(x=Petal.Width, color=Species, fill=Species) +
-  geom_histogram(bins=30, alpha=0.25) + 
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal)
-
-dpl<-ggplot(iris) +
-   aes(x=Petal.Length, color=Species, fill=Species) +
-   geom_density(alpha=0.25) + 
-   theme(legend.position = "none") +
-   scale_color_manual(values = color_pal) + 
-   scale_fill_manual(values = color_pal)
-
-bpl<-ggplot(iris) +
-  aes(y=Petal.Length, x=Species, fill=Species, color=Species) +
-  stat_boxplot(geom="errorbar",width=0.2) +
-  geom_boxplot(varwidth = TRUE, alpha=0.2) + 
-  theme(legend.position = "none") +
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal)
-
-sp<-ggplot(iris) +
-  aes(x = Petal.Length, y = Petal.Width, shape = Species, color=Species, fill=Species) +
-  geom_point() +
-  facet_wrap(~Species) +
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal) + 
-  labs(
-    title = "Petal Width and Length of 150 flowers of Iris",
-    subtitle = "In relation to their species",
-    x = "Petal Length in cm",
-    y = "Petal Width in cm"
-  ) + theme.title
-
-dps<-ggplot(iris) +
-   aes(x=Sepal.Length, color=Species, fill=Species) +
-   geom_density(alpha=0.25) + 
-   theme(legend.position = "none") +
-   scale_color_manual(values = color_pal) + 
-   scale_fill_manual(values = color_pal)
-
-hs<-ggplot(iris) +
-  aes(x=Sepal.Length, color=Species, fill=Species) +
-  geom_histogram(bins=30, alpha=0.25) + 
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal)
-
-bps<-ggplot(iris) +
-  aes(x=Sepal.Length, y=Species, fill=Species, color=Species) +
-  stat_boxplot(geom="errorbar",width=0.2) +
-  geom_boxplot(varwidth = TRUE, alpha=0.2) + 
-  geom_jitter(alpha = 0.25, width = 0.2) +
-  theme(legend.position = "none") +
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal)
-
-sps<-ggplot(iris) +
-  aes(x = Sepal.Width, y = Sepal.Length, shape = Species, color=Species, fill=Species) +
-  geom_point() +
-  facet_wrap(~Species) +
-  scale_color_manual(values = color_pal) + 
-  scale_fill_manual(values = color_pal) + 
-  labs(
-    title = "Sepal Width and Length of 150 flowers of Iris",
-    subtitle = "In relation to their species",
-    x = "Sepal Width in cm",
-    y = "Sepal Length in cm"
-  ) + theme.title
-
-(dp + h) / bp / (dpl + bpl) / sp
-sps/ (dps + hs) / bps
-
-
-### PCA for Iris data  
-
-To do a Principal Component Analysis we will use *prcomp()* and plot the eigenvalues in a scree plot. We see that there's an elbow at 2, so we choose 2 dimensions. *iris.pca$x* has the same dimensions as *X*.  
-
-```{r }
-X<-iris[,1:4]             ## exclude the Species column
-S <- cov(X)               ## compute variance-covariance matrix 
-iris.pca <- prcomp(X)     ## perform PCA
-lambda <- eigen(S)$values ## calculate eigenvalues
-```
-
-```{r echo=FALSE}
-## scree plot
-plot(lambda/sum(lambda),                        ## or instead of lambda: iris.pca$sdev^2
-    main = "Scree plot of eigenvalues in %",
-    col=c("black", "red", "black", "black"))
-lines(lambda/sum(lambda))                       ## or: iris.pca$sdev^2
-```  
