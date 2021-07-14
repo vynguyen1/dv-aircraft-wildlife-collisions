@@ -101,5 +101,66 @@ ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) 
   geom_bar()
 
 # TODO:
-# 1. Anzahl der Kollisionen auf Map plotten Sommer/Winter für eine bestimmte Spezies
+## 1. Anzahl der Kollisionen auf Map plotten Sommer/Winter für eine bestimmte Spezies
+library(maps)
+library(mapdata)
+
+usa <- map_data('usa')
+us.state <- map_data("state")
+df.state <- as.data.frame(cbind(state.abb, state.name)); df.state
+df.state$state.name <- tolower(df.state$state.name)
+
+birds$struck_num<-unclass(birds$birds_struck)
+
+birds.with.statenames<-merge(x = birds, y = df.state, by.x = "state", by.y = "state.abb")
+filtered.has.species<-birds.with.statenames[!is.na(birds.with.statenames$species),]
+is.hawk<-grepl("HAWK", filtered.has.species$species)
+filtered.hawk <- filtered.has.species[is.hawk,]
+
+filtered.hawk.summer<-filtered.hawk[as.numeric(filtered.hawk$month) >= 4 & as.numeric(filtered.hawk$month) < 10,]
+filtered.hawk.winter<-filtered.hawk[as.numeric(filtered.hawk$month) <= 3 | as.numeric(filtered.hawk$month) >= 10,]
+
+num.collisions.per.state.summer<-aggregate(filtered.hawk.summer$struck_num, by=list(region=filtered.hawk.summer$state.name), FUN=sum)
+num.collisions.per.state.winter<-aggregate(filtered.hawk.winter$struck_num, by=list(region=filtered.hawk.winter$state.name), FUN=sum)
+
+dfs.merged.summer<-merge(us.state, num.collisions.per.state.summer, by = "region")
+dfs.merged.winter<-merge(us.state, num.collisions.per.state.winter, by = "region")
+
+plot_summer<-ggplot(data=dfs.merged.summer, aes(x=long, y=lat, fill=x, group=group)) + 
+  geom_polygon(color = "white") + 
+  scale_fill_continuous(low="grey", high="red") +
+  guides(fill=FALSE) + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  ggtitle('Hawk collisions during Summer') + 
+  coord_fixed(1.3)
+
+plot_winter<-ggplot(data=dfs.merged.winter, aes(x=long, y=lat, fill=x, group=group)) + 
+  geom_polygon(color = "white") + 
+  scale_fill_continuous(low="grey", high="blue") +
+  guides(fill=FALSE) + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  ggtitle('Hawk collisions during Winter') + 
+  coord_fixed(1.3)
+
+plot_summer / plot_winter
+
 # 2. Grouping per year -> Anzahl der Kollisionen
+birds$year<-format(as.Date(as.character(birds$date), format = "%m/%d/%Y"), "%Y")
+birds.filtered<-birds[!is.na(birds$struck_num),]
+
+require(plyr)
+birds.filtered$struck_num <- mapvalues(birds.filtered$struck_num, 
+                               from=c(1,2,3,4,5), 
+                               to=c(0,1,5,50,100))
+
+num.collisions.per.month<-aggregate(birds.filtered$struck_num, by=list(month=birds.filtered$month), FUN=sum)
+
+library(dplyr)
+strucks.per.year.month<-birds.filtered %>%
+  group_by(year, month) %>% 
+  summarize_at("struck_num",sum,na.rm=TRUE)
+
+ggplot(strucks.per.year.month, aes(x = month, y = struck_num, colour=year, group = year)) + geom_line() + geom_point()
+
