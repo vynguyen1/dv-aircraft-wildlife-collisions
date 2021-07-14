@@ -99,6 +99,8 @@ ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) 
 ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) +
   aes(y = species, group=birds_struck, fill=birds_struck) +
   geom_bar()
+# Sort
+str(birds$species)
 
 # TODO:
 ## 1. Anzahl der Kollisionen auf Map plotten Sommer/Winter für eine bestimmte Spezies
@@ -123,10 +125,12 @@ filtered.hawk.winter<-filtered.hawk[as.numeric(filtered.hawk$month) <= 3 | as.nu
 num.collisions.per.state.summer<-aggregate(filtered.hawk.summer$struck_num, by=list(region=filtered.hawk.summer$state.name), FUN=sum)
 num.collisions.per.state.winter<-aggregate(filtered.hawk.winter$struck_num, by=list(region=filtered.hawk.winter$state.name), FUN=sum)
 
-dfs.merged.summer<-merge(us.state, num.collisions.per.state.summer, by = "region")
-dfs.merged.winter<-merge(us.state, num.collisions.per.state.winter, by = "region")
+dfs.merged.summer<-merge(us.state, num.collisions.per.state.summer, by = "region", all.x = TRUE)
+dfs.merged.winter<-merge(us.state, num.collisions.per.state.winter, by = "region", all.x = TRUE)
+length(unique(dfs.merged.summer$region))
+# Proportional?
 
-plot_summer<-ggplot(data=dfs.merged.summer, aes(x=long, y=lat, fill=x, group=group)) + 
+plot_summer<-ggplot(data=dfs.merged.summer[with(dfs.merged.summer, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
   geom_polygon(color = "white") + 
   scale_fill_continuous(low="grey", high="red") +
   guides(fill=FALSE) + 
@@ -135,9 +139,9 @@ plot_summer<-ggplot(data=dfs.merged.summer, aes(x=long, y=lat, fill=x, group=gro
   ggtitle('Hawk collisions during Summer') + 
   coord_fixed(1.3)
 
-plot_winter<-ggplot(data=dfs.merged.winter, aes(x=long, y=lat, fill=x, group=group)) + 
+plot_winter<-ggplot(data=dfs.merged.winter[with(dfs.merged.winter, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
   geom_polygon(color = "white") + 
-  scale_fill_continuous(low="grey", high="blue") +
+  scale_fill_continuous(low="grey", high="red") +
   guides(fill=FALSE) + 
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
         axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
@@ -162,5 +166,7 @@ strucks.per.year.month<-birds.filtered %>%
   group_by(year, month) %>% 
   summarize_at("struck_num",sum,na.rm=TRUE)
 
-ggplot(strucks.per.year.month, aes(x = month, y = struck_num, colour=year, group = year)) + geom_line() + geom_point()
+coll.year.month<-ggplot(strucks.per.year.month, aes(x = month, y = struck_num, colour=year, group = year)) + geom_line() + geom_point()
+coll.year<-ggplot(birds.filtered, aes(x = year, fill=year, group = year)) + geom_bar()
 
+coll.year / coll.year.month

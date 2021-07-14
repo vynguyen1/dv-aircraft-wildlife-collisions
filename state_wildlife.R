@@ -81,8 +81,14 @@ birds.filtered$struck_num <- mapvalues(birds.filtered$struck_num,
 
 num.collisions.per.state<-aggregate(filtered.birds$struck_num, by=list(region=filtered.birds$state.name), FUN=sum)
 dfs.merged<-merge(us.state, num.collisions.per.state, by = "region")
+length(unique(us.state$region))  # 49
+length(num.collisions.per.state$region) # 50
 
-ggplot(data=dfs.merged, aes(x=long, y=lat, fill=x, group=group)) + 
+`%nin%` = Negate(`%in%`)
+unique(us.state$region)[unique(us.state$region) %nin% num.collisions.per.state$region]   # District Of Columbia
+unique(num.collisions.per.state$region)[unique(num.collisions.per.state$region) %nin% us.state$region]  # Alaska, Hawaii
+
+ggplot(data=dfs.merged[with(dfs.merged, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
   geom_polygon(color = "white") + 
   scale_fill_continuous(low="grey", high="red") +
   guides(fill=FALSE) + 
@@ -101,7 +107,8 @@ ggplot(data=us.state, aes(x=long, y=lat, fill=region, group=group)) +
   coord_fixed(1.3)
 
 
-## Kategorisierung Bird/Non-Bird (Grep wo species bird beinhaltet & dann nach height; alles kleiner als z.B. 10 ist nicht Vogel)
+## Kategorisierung Bird/Non-Bird (Grep wo species bird beinhaltet & dann nach height; alles kleiner als z.B. 7 ist nicht Vogel)
+
 is.bird<-grepl("BIRD|DUCK|PIGEON|HAWK|GULL|DOVE|PARROT|SWAN|GEESE|GOOSE|TURKEY|NIGHTJAR|GREBE|CARDINAL|MARTIN|BLUE JAY|CRANE|WHIP-POOR-WILL|TOWHEE|WARBLER|CORMORANT|HARRIER|BUNTING|PHEASANT|SANDPIPER|PELICAN|OSPREY|ANHINGA|WREN|MAGPIE|MANNIKIN|FINCH|ORIOLE|SNIPE|WIGEON|STARLING|AVOCET|GROUSE|BOBWHITE|CROW|TERN|VULTURE|ROBIN|OWL|FALCON|KILLDEER|GRACKLE|MYNA|PLOVER|MALLARD|SWALLOW|EGRET|KESTREL|LARK|SPARROW|HERON|EAGLE|CHICKADEE|MERGANSER", birds.with.statenames$species) | grepl("BIRD", birds.with.statenames$remarks) | birds.with.statenames$height >= 7
 birds.with.statenames$is.bird<-is.bird
 
@@ -114,7 +121,7 @@ is.bird.state<-aggregate(filtered.isbird$is.bird, by=list(region=filtered.isbird
 dfs.merged.2<-merge(us.state, is.bird.state, by = "region")
 
 # The redder the more birds
-ggplot(data=dfs.merged.2, aes(x=long, y=lat, fill=x, group=group)) + 
+ggplot(data=dfs.merged.2[with(dfs.merged.2, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
   geom_polygon(color = "white") + 
   scale_fill_continuous(low="blue", high="red") +
 guides(fill=FALSE) + 
@@ -129,9 +136,10 @@ guides(fill=FALSE) +
 is.vulture<-grepl("VULTURE", filtered.isbird$species)
 filtered.isbird$is.vulture <- is.vulture
 is.vulture<-aggregate(filtered.isbird$is.vulture, by=list(region=filtered.isbird$state.name), FUN=sum)
+sum(is.vulture$x) # 172
 dfs.merged.3<-merge(us.state, is.vulture, by = "region")
 
-ggplot(data=dfs.merged.3, aes(x=long, y=lat, fill=x, group=group)) + 
+ggplot(data=dfs.merged.3[with(dfs.merged.3, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
   geom_polygon(color = "white") + 
   scale_fill_continuous(low="grey", high="red") +
   guides(fill=FALSE) + 
@@ -139,3 +147,5 @@ ggplot(data=dfs.merged.3, aes(x=long, y=lat, fill=x, group=group)) +
         axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
   ggtitle('U.S. Map with States') + 
   coord_fixed(1.3)
+
+# Proportionale Kollisionen?
