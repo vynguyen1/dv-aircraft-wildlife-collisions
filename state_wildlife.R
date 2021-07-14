@@ -73,12 +73,24 @@ birds$struck_num<-unclass(birds$birds_struck)
 
 birds.with.statenames<-merge(x = birds, y = df.state, by.x = "state", by.y = "state.abb")
 filtered.birds<-birds.with.statenames[!is.na(birds.with.statenames$birds_struck),]
+
+require(plyr)
+birds.filtered$struck_num <- mapvalues(birds.filtered$struck_num, 
+                                     from=c(1,2,3,4,5), 
+                                     to=c(0,1,5,50,100))
+
 num.collisions.per.state<-aggregate(filtered.birds$struck_num, by=list(region=filtered.birds$state.name), FUN=sum)
 dfs.merged<-merge(us.state, num.collisions.per.state, by = "region")
+length(unique(us.state$region))  # 49
+length(num.collisions.per.state$region) # 50
 
-ggplot(data=dfs.merged, aes(x=long, y=lat, fill=x, group=group)) + 
+`%nin%` = Negate(`%in%`)
+unique(us.state$region)[unique(us.state$region) %nin% num.collisions.per.state$region]   # District Of Columbia
+unique(num.collisions.per.state$region)[unique(num.collisions.per.state$region) %nin% us.state$region]  # Alaska, Hawaii
+
+ggplot(data=dfs.merged[with(dfs.merged, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
   geom_polygon(color = "white") + 
-  scale_fill_continuous(low="grey", high="red")
+  scale_fill_continuous(low="grey", high="red") +
   guides(fill=FALSE) + 
   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
         axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
@@ -95,6 +107,45 @@ ggplot(data=us.state, aes(x=long, y=lat, fill=region, group=group)) +
   coord_fixed(1.3)
 
 
-# Kategorisierung Bird/Non-Bird ?  (Grep wo species bird beinhaltet & dann nach height; alles kleiner als z.B. 10 ist nicht Vogel)
-# Look at different species (what's closer to equator)
+## Kategorisierung Bird/Non-Bird (Grep wo species bird beinhaltet & dann nach height; alles kleiner als z.B. 7 ist nicht Vogel)
+
+is.bird<-grepl("BIRD|DUCK|PIGEON|HAWK|GULL|DOVE|PARROT|SWAN|GEESE|GOOSE|TURKEY|NIGHTJAR|GREBE|CARDINAL|MARTIN|BLUE JAY|CRANE|WHIP-POOR-WILL|TOWHEE|WARBLER|CORMORANT|HARRIER|BUNTING|PHEASANT|SANDPIPER|PELICAN|OSPREY|ANHINGA|WREN|MAGPIE|MANNIKIN|FINCH|ORIOLE|SNIPE|WIGEON|STARLING|AVOCET|GROUSE|BOBWHITE|CROW|TERN|VULTURE|ROBIN|OWL|FALCON|KILLDEER|GRACKLE|MYNA|PLOVER|MALLARD|SWALLOW|EGRET|KESTREL|LARK|SPARROW|HERON|EAGLE|CHICKADEE|MERGANSER", birds.with.statenames$species) | grepl("BIRD", birds.with.statenames$remarks) | birds.with.statenames$height >= 7
+birds.with.statenames$is.bird<-is.bird
+
+# Species that are not bird
+ggplot(birds.with.statenames[!birds.with.statenames$is.bird & !is.na(birds.with.statenames$is.bird),], aes(..count.., species)) + geom_bar(aes(fill = species)) + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+filtered.isbird<-birds.with.statenames[!is.na(birds.with.statenames$is.bird),]
+is.bird.state<-aggregate(filtered.isbird$is.bird, by=list(region=filtered.isbird$state.name), FUN=sum)
+dfs.merged.2<-merge(us.state, is.bird.state, by = "region")
+
+# The redder the more birds
+ggplot(data=dfs.merged.2[with(dfs.merged.2, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
+  geom_polygon(color = "white") + 
+  scale_fill_continuous(low="blue", high="red") +
+guides(fill=FALSE) + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  ggtitle('U.S. Map with States') + 
+  coord_fixed(1.3)
+
+
+## Look at different species (what's closer to equator)
 # Eine Spezies raussuchen: mappen
+is.vulture<-grepl("VULTURE", filtered.isbird$species)
+filtered.isbird$is.vulture <- is.vulture
+is.vulture<-aggregate(filtered.isbird$is.vulture, by=list(region=filtered.isbird$state.name), FUN=sum)
+sum(is.vulture$x) # 172
+dfs.merged.3<-merge(us.state, is.vulture, by = "region")
+
+ggplot(data=dfs.merged.3[with(dfs.merged.3, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 
+  geom_polygon(color = "white") + 
+  scale_fill_continuous(low="grey", high="red") +
+  guides(fill=FALSE) + 
+  theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) + 
+  ggtitle('U.S. Map with States') + 
+  coord_fixed(1.3)
+
+# Proportionale Kollisionen?
