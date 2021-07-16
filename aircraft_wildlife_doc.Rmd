@@ -3,8 +3,8 @@ title: "Aircraft Wildlife collisions"
 author: "Alexander Flick & Vy Nguyen"
 date: "21/07/2021"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -20,9 +20,13 @@ data("birds")
 library(ggplot2)
 library(patchwork)
 library(ggmosaic)
+library("viridis")
+library(RColorBrewer) # https://www.datanovia.com/en/blog/top-r-color-palettes-to-know-for-great-data-visualization/  -> Purples, BuPu; Map: BrBG
 
-theme_set(theme_classic())
+theme_set(theme_minimal())
 color_pal<-c("seagreen", "steelblue", "darkred", "orange")
+color_pal_sky<-c("lightgoldenrod","honeydew","skyblue3")
+color_pal_TF<-c("darksalmon","cadetblue")
 theme.title<-theme(
     plot.title = element_text(
       hjust = 0.5, # center
@@ -85,7 +89,7 @@ names(missing_df)[2] <- "count"
 
 ggplot(missing_df) + 
   aes(x=reorder(column, -count), y=count) +
-  geom_bar(stat="identity") +
+  geom_bar(stat="identity", fill="snow3") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 
@@ -96,21 +100,25 @@ ggplot(missing_df) +
 ```{r echo=FALSE, fig.asp=0.5}
 birds_strike_phase <- ggplot(birds[!is.na(birds$phase_of_flt) & !is.na(birds$birds_struck),]) +
   aes(x = phase_of_flt, fill=birds_struck) +
+  scale_fill_brewer(palette="Blues") +
   geom_bar()
 
 #relationship of amount of birds struck with clouds?
 birds_strike_sky <- ggplot(birds[!is.na(birds$sky) & !is.na(birds$birds_struck),])+
   aes(x=birds_struck, fill=sky)+
+  scale_fill_manual(values = color_pal_sky)+
   geom_bar(position = "fill")
 
 # Most collisions during the day #genauer betrachten
 birds_strike_time <- ggplot(birds[!is.na(birds$time_of_day) & !is.na(birds$birds_struck),]) + 
   aes(x=time_of_day, fill=birds_struck) + 
+  scale_fill_brewer(palette="Blues") +
   geom_bar()
 
 ### Birds struck out of birds seen
 birds_struck_seen <- ggplot(birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]) +
   geom_mosaic(aes(x = product(birds_seen), fill=birds_struck)) +
+  scale_fill_brewer(palette="Blues") +
   theme(axis.text.y=element_blank(), axis.ticks.y = element_blank())
 
 (birds_strike_phase + birds_strike_sky) / (birds_strike_time + birds_struck_seen)
@@ -129,6 +137,7 @@ above_ground <- birds[as.integer(birds$phase_of_flt)>3 & as.integer(birds$phase_
 height_by_phase <- ggplot(above_ground) +
   aes(x = phase_of_flt, y = height, fill=phase_of_flt) +
   stat_boxplot(geom="errorbar", width=0.4) +
+  scale_fill_brewer(palette="Pastel2") +
   geom_boxplot()
 # Heights during Descent are on average higher than 
 # hypothesis: Collisions happen more often during Descent and are therefore more prominent in the data set?
@@ -136,6 +145,7 @@ height_by_phase <- ggplot(above_ground) +
 #plot height density for Descent and EnRoute
 density <- ggplot(birds[birds$phase_of_flt== "Descent" | birds$phase_of_flt=="En Route",]) +
   aes(x = height, group=phase_of_flt,fill=phase_of_flt ) +
+  scale_fill_brewer(palette='Pastel2') +
   geom_density(adjust=1.5,alpha=.8)
 
 height_by_phase + density
@@ -158,6 +168,7 @@ for birdsstruck by sky we can see that with increasing amount of birds the sky t
 density <- ggplot(above_ground[!is.na(above_ground$birds_struck),]) +
   aes(x = height, group=birds_struck,fill=birds_struck)+
   geom_density(adjust=1.5,alpha=.6) +
+  scale_fill_brewer(palette="Blues") +
   xlim(0, 3500)
 density
 
@@ -172,10 +183,12 @@ there are only 2 levels in the data available for birds seen
 birds_seen_plt <- ggplot(birds[!is.na(birds$time_of_day),])+
   aes(x=time_of_day, fill=birds_seen)+
   geom_bar(position = "fill") +
+  scale_fill_brewer(palette="BuGn") +
   theme(legend.position="none")
 
 birds_seenNo_sky <- ggplot(birds[!is.na(birds$sky),])+
   aes(x=sky, fill=birds_seen)+
+  scale_fill_brewer(palette="BuGn") +
   geom_bar(position="fill")
 
 #relationship of seen or not seen with daytime?
@@ -192,8 +205,8 @@ contradiction: would have expected to see less birds when amount of clouds incre
 
 ```{r echo=FALSE, fig.asp=0.5, figures-side, fig.show="hold"}
 par(mfrow=c(1,2))
-spineplot(birds$height, birds$birds_seen)
-spineplot(birds$speed, birds$birds_seen)
+spineplot(birds$height, birds$birds_seen, col = rev(brewer.pal(n=3,name="BuGn")))
+spineplot(birds$speed, birds$birds_seen, col = rev(brewer.pal(n=3,name="BuGn")))
 ```
 The higher the speed & height, the less likely to see a bird before collision
 for height > 2000 foot probability to see a birds before collision decreases 
@@ -216,17 +229,20 @@ seen_vs_strike$less_strike_than_seen <- as.factor(as.integer(seen_vs_strike$bird
 # phase of flight by birdsstruck < birds seen
 seen_vs_strike_phase <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$phase_of_flt),]) +
   aes(x=phase_of_flt, fill=less_strike_than_seen) +
+  scale_fill_manual(values = color_pal_TF)+
   geom_bar(position = "fill")
 
 #ac_mass by leess-strike-than-seen (MOSAIC)
 seen_vs_strike_ac_mass <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$ac_mass),]) +
   geom_mosaic(aes(x=product(ac_mass), fill=less_strike_than_seen)) +
-   theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
+  scale_fill_manual(values = color_pal_TF)+
+  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
 
 #num_engs by leess-strike-than-seen (MOSAIC)
 seen_vs_strike_num_engs <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$num_engs),]) +
   geom_mosaic(aes(x=product(num_engs), fill=less_strike_than_seen)) +
-   theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
+  scale_fill_manual(values = color_pal_TF)+
+  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
 
 seen_vs_strike_phase / (seen_vs_strike_ac_mass + seen_vs_strike_num_engs)
 ```
@@ -239,6 +255,7 @@ lighter machines and machines with less sngines tend to hit less wildlife out of
 #comparison right? because we actually want to compare here the positive impact
 birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$effect),]) +
   aes(x = birds_struck, fill = effect) +
+  scale_fill_brewer(palette="OrRd") +
   geom_bar(position="fill")
 
 #mosaic in ggplot2
@@ -247,11 +264,13 @@ birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ef
 #mosaic plot better than barplot visualizes also absolute differences
 birds_effect_acmass <- ggplot(birds[!is.na(birds$ac_mass) & !is.na(birds$effect),]) +
   geom_mosaic(aes(x = product(ac_mass), fill=effect)) +
+  scale_fill_brewer(palette="OrRd") +
   theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
 
 #birdds_seenYes by effect
 birds_effect_seenYes <- ggplot(birds[!is.na(birds$effect),]) +
   geom_mosaic(aes(x = product(birds_seenYes), fill=effect))+
+  scale_fill_brewer(palette="OrRd") +
   #theme(legend.title = element_blank())
   theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
 

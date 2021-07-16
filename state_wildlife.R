@@ -39,7 +39,7 @@ sum(birds$birds_struck=="0", na.rm=T)  # now 52
 ############
 
 # 20 most frequent species
-ggplot(birds[birds$species %in% names(sort(table(birds$species), decreasing = TRUE)[1:20]), ], aes(..count.., species)) + geom_bar(aes(fill = state)) + 
+ggplot(as.data.frame(sort(table(birds$species), decreasing = TRUE)[1:20]), aes(y=reorder(Var1, Freq), x=Freq)) + geom_bar(stat="identity") + 
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 table(birds$species, birds$state)
@@ -55,9 +55,9 @@ ggplot(california_collisions, aes(..count.., species)) +
   geom_bar(aes(fill = species))
 
 # Number of collisions per state
-ggplot(data = birds[birds$birds_struck != "0" | !is.na(birds$birds_struck),], aes(..count.., state, fill = ..count..)) + 
-  geom_bar() +
-  scale_fill_continuous(low="grey", high="red")
+ggplot(data = birds[birds$birds_struck != "0" | !is.na(birds$birds_struck),], aes(..count.., state, fill = as.factor(ac_mass))) + 
+  geom_bar()
+  #scale_fill_continuous(low="grey", high="red")
 
 
 # Number of collisions per state in a map
@@ -118,6 +118,8 @@ ggplot(birds.with.statenames[!birds.with.statenames$is.bird & !is.na(birds.with.
 
 filtered.isbird<-birds.with.statenames[!is.na(birds.with.statenames$is.bird),]
 is.bird.state<-aggregate(filtered.isbird$is.bird, by=list(region=filtered.isbird$state.name), FUN=sum)
+num.coll.per.state<-as.data.frame(table(filtered.isbird$state.name))
+is.bird.state$x <- is.bird.state$x / num.coll.per.state$Freq
 dfs.merged.2<-merge(us.state, is.bird.state, by = "region")
 
 # The redder the more birds
@@ -130,6 +132,8 @@ guides(fill=FALSE) +
   ggtitle('U.S. Map with States') + 
   coord_fixed(1.3)
 
+## Birds/Non-Birds in zwei Karten nebeneinander
+# https://ggplot2.tidyverse.org/reference/geom_map.html
 
 ## Look at different species (what's closer to equator)
 # Eine Spezies raussuchen: mappen
@@ -137,6 +141,7 @@ is.vulture<-grepl("VULTURE", filtered.isbird$species)
 filtered.isbird$is.vulture <- is.vulture
 is.vulture<-aggregate(filtered.isbird$is.vulture, by=list(region=filtered.isbird$state.name), FUN=sum)
 sum(is.vulture$x) # 172
+is.vulture$x <- is.vulture$x / num.coll.per.state$Freq
 dfs.merged.3<-merge(us.state, is.vulture, by = "region")
 
 ggplot(data=dfs.merged.3[with(dfs.merged.3, order(-group, order)), ], aes(x=long, y=lat, fill=x, group=group)) + 

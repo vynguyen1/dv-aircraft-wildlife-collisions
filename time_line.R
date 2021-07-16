@@ -57,6 +57,11 @@ month_plot<-ggplot(birds[!is.na(birds$birds_struck),]) +
   geom_bar()
 # -> more collisions during autumn/fall
 
+ggplot(birds[!is.na(birds$sky),]) +
+  aes(x = month, group=sky, fill=sky) +
+  geom_bar(position="fill")
+# -> less overcast during summer months
+
 # Or weekly:
 birds$day<-format(as.Date(as.character(birds$date), format = "%m/%d/%Y"), "%a")
 week_plot<-ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) +
@@ -78,8 +83,7 @@ woy_plot<-ggplot(birds) +
   aes(x = calendar_week, group=birds_struck, fill=birds_struck) +
   geom_bar()
 
-month_plot / woy_plot
-week_plot / tod_plot
+(month_plot + woy_plot) / (week_plot + tod_plot)
 
 month_plot_filt<-ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) +
   aes(x = month, group=birds_struck, fill=birds_struck) +
@@ -99,7 +103,7 @@ ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) 
 ggplot(birds[!is.na(birds$birds_struck) & as.integer(birds$birds_struck) > 3,]) +
   aes(y = species, group=birds_struck, fill=birds_struck) +
   geom_bar()
-# Sort
+# Take top 3, small graph
 str(birds$species)
 
 # TODO:
@@ -113,6 +117,10 @@ df.state <- as.data.frame(cbind(state.abb, state.name)); df.state
 df.state$state.name <- tolower(df.state$state.name)
 
 birds$struck_num<-unclass(birds$birds_struck)
+require(plyr)
+birds$struck_num <- mapvalues(birds$struck_num, 
+                                       from=c(1,2,3,4,5), 
+                                       to=c(0,1,5,50,100))
 
 birds.with.statenames<-merge(x = birds, y = df.state, by.x = "state", by.y = "state.abb")
 filtered.has.species<-birds.with.statenames[!is.na(birds.with.statenames$species),]
@@ -122,8 +130,13 @@ filtered.hawk <- filtered.has.species[is.hawk,]
 filtered.hawk.summer<-filtered.hawk[as.numeric(filtered.hawk$month) >= 4 & as.numeric(filtered.hawk$month) < 10,]
 filtered.hawk.winter<-filtered.hawk[as.numeric(filtered.hawk$month) <= 3 | as.numeric(filtered.hawk$month) >= 10,]
 
+num.hawk.coll.per.state<-as.data.frame(table(filtered.hawk$state.name))
 num.collisions.per.state.summer<-aggregate(filtered.hawk.summer$struck_num, by=list(region=filtered.hawk.summer$state.name), FUN=sum)
+num.collisions.per.state.summer<-merge(num.collisions.per.state.summer, num.hawk.coll.per.state, by.x = "region", by.y="Var1")
+num.collisions.per.state.summer$x <- num.collisions.per.state.summer$x / num.collisions.per.state.summer$Freq
 num.collisions.per.state.winter<-aggregate(filtered.hawk.winter$struck_num, by=list(region=filtered.hawk.winter$state.name), FUN=sum)
+num.collisions.per.state.winter<-merge(num.collisions.per.state.winter, num.hawk.coll.per.state, by.x = "region", by.y="Var1")
+num.collisions.per.state.winter$x <- num.collisions.per.state.winter$x / num.collisions.per.state.winter$Freq
 
 dfs.merged.summer<-merge(us.state, num.collisions.per.state.summer, by = "region", all.x = TRUE)
 dfs.merged.winter<-merge(us.state, num.collisions.per.state.winter, by = "region", all.x = TRUE)
@@ -154,11 +167,6 @@ plot_summer / plot_winter
 birds$year<-format(as.Date(as.character(birds$date), format = "%m/%d/%Y"), "%Y")
 birds.filtered<-birds[!is.na(birds$struck_num),]
 
-require(plyr)
-birds.filtered$struck_num <- mapvalues(birds.filtered$struck_num, 
-                               from=c(1,2,3,4,5), 
-                               to=c(0,1,5,50,100))
-
 num.collisions.per.month<-aggregate(birds.filtered$struck_num, by=list(month=birds.filtered$month), FUN=sum)
 
 library(dplyr)
@@ -167,6 +175,13 @@ strucks.per.year.month<-birds.filtered %>%
   summarize_at("struck_num",sum,na.rm=TRUE)
 
 coll.year.month<-ggplot(strucks.per.year.month, aes(x = month, y = struck_num, colour=year, group = year)) + geom_line() + geom_point()
-coll.year<-ggplot(birds.filtered, aes(x = year, fill=year, group = year)) + geom_bar()
+
+strucks.per.year<-as.data.frame(table(birds.filtered$year))
+coll.year<-ggplot(strucks.per.year) + 
+  aes(x = as.numeric(as.character(Var1)), y = Freq) + 
+  geom_line() + geom_point()
+
+coll.year<-ggplot(birds.filtered, aes(x = year, group = year)) + geom_bar()
 
 coll.year / coll.year.month
+
