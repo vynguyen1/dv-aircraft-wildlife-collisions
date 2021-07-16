@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Data preparation
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, message= FALSE, fig.asp=1}
 
 library(openintro)
 data("birds")
@@ -44,35 +44,38 @@ birds$phase_of_flt<-factor(birds$phase_of_flt, levels=factor_phase_flt)
 factor_struck<-c("0", "1", "2-10", "11-100", "Over 100")
 birds$birds_struck<-factor(birds$birds_struck, levels=factor_struck)
 
+factor_sky<-c("No Cloud", "Some Cloud", "Overcast")
+birds$sky <- factor(birds$sky, levels=factor_sky)
+
+factor_effect <- c("None","Other","Aborted Take-off","Engine Shut Down","Precautionary Landing")
+birds$effect <- factor(birds$effect, levels=factor_effect)
+
+birds$effectYes<- as.factor(birds$effect != "None")
+
 birds$num_engs <- as.factor(birds$num_engs)
 
 #birds seen: remove one wrong entry
-which(birds$birds_seen==":-10")
+  # which(birds$birds_seen==":-10")
 birds$birds_seen[9412] <- NA
 
-factor_seen<-c("2-10", "11-100")
+factor_seen<-c("None","2-10", "11-100")
 birds$birds_seen <- factor(birds$birds_seen, levels=factor_seen) 
   # drop unused level ":-10" by assigning levels again
-levels(birds$birds_seen)
-
+birds$birds_seenYes <- as.factor(!is.na(birds$birds_seen))
+#set Na values in birds seen to "None"
+birds[is.na(birds$birds_seen),"birds_seen"] <- "None"
 #\newpage
 ```
 
 ## Handling missing values
 
-```{r echo=FALSE, message=FALSE}
+```{r echo=FALSE, message=FALSE, fig.asp=0.5}
 #get rows where birds struck is missing
 df <- birds[is.na(birds$birds_struck), 
             c("remarks", "birds_seen", "effect", "birds_struck")]
 no_strike <- grepl("NOT A STRIKE|NO STRIKE|NOT A STRKE", df$remarks)
 # set birds_struck to 0 for "no strike"
 birds[is.na(birds$birds_struck),][no_strike,"birds_struck"] <- "0"
-
-#TODO: get ac mass and num_engs from aircraft model
-
-sum(is.na(birds$atype)) #0
-birds[,c("atype", "num_engs", "ac_mass")]
-sapply(birds[,c("atype", "num_engs", "ac_mass")], function(x) sum(is.na(x)))
 
 # Amount of na for each column
 missing <- sapply(birds, function(x) sum(is.na(x)))
@@ -90,8 +93,38 @@ ggplot(missing_df) +
 
 # Analysis of strikes (birds_struck)
 
-```{r echo=FALSE, fig.asp=1}
+```{r echo=FALSE, fig.asp=0.5}
+birds_strike_phase <- ggplot(birds[!is.na(birds$phase_of_flt) & !is.na(birds$birds_struck),]) +
+  aes(x = phase_of_flt, fill=birds_struck) +
+  geom_bar()
 
+#relationship of amount of birds struck with clouds?
+birds_strike_sky <- ggplot(birds[!is.na(birds$sky) & !is.na(birds$birds_struck),])+
+  aes(x=birds_struck, fill=sky)+
+  geom_bar(position = "fill")
+
+# Most collisions during the day #genauer betrachten
+birds_strike_time <- ggplot(birds[!is.na(birds$time_of_day) & !is.na(birds$birds_struck),]) + 
+  aes(x=time_of_day, fill=birds_struck) + 
+  geom_bar()
+
+### Birds struck out of birds seen
+birds_struck_seen <- ggplot(birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]) +
+  geom_mosaic(aes(x = product(birds_seen), fill=birds_struck)) +
+  theme(axis.text.y=element_blank(), axis.ticks.y = element_blank())
+
+(birds_strike_phase + birds_strike_sky) / (birds_strike_time + birds_struck_seen)
+## descent and en-route are about equal 
+```
+TODO: add Chi-squared independence test for sky and birds struck
+http://www.sthda.com/english/wiki/chi-square-test-of-independence-in-r
+
+
+
+the higher the amount of birds struck the more clouds
+
+## Closer look on En Rout and Descent
+```{r echo=FALSE, fig.asp=0.5, warning=FALSE}
 above_ground <- birds[as.integer(birds$phase_of_flt)>3 & as.integer(birds$phase_of_flt)<8 & !is.na(birds$phase_of_flt),]
 height_by_phase <- ggplot(above_ground) +
   aes(x = phase_of_flt, y = height, fill=phase_of_flt) +
@@ -99,127 +132,112 @@ height_by_phase <- ggplot(above_ground) +
   geom_boxplot()
 # Heights during Descent are on average higher than 
 # hypothesis: Collisions happen more often during Descent and are therefore more prominent in the data set?
-count_phase <- ggplot(above_ground) +
-  aes(x = phase_of_flt, fill=phase_of_flt) +
-  geom_bar()
 
-height_by_phase / count_phase
-## descent and en-route are about equal 
-
-which(birds$height==max(birds$height, na.rm = T))
-birds[15053,] # >30000 foot (1 meter = 3,28084 foot)
-?birds
-```
-
-## Closer look on En Rout and Descent
-```{r echo=TRUE, fig.asp=0.5}
 #plot height density for Descent and EnRoute
-ggplot(birds[birds$phase_of_flt== "Descent" | birds$phase_of_flt=="En Route",]) +
+density <- ggplot(birds[birds$phase_of_flt== "Descent" | birds$phase_of_flt=="En Route",]) +
   aes(x = height, group=phase_of_flt,fill=phase_of_flt ) +
   geom_density(adjust=1.5,alpha=.8)
+
+height_by_phase + density
 
 ```
 
 t.test
-```{r echo=TRUE, fig.asp=1}
+```{r echo=FALSE, fig.asp=1}
 #Two sample t.test for height dependent on phase of flight ("Descent" and "En Route")
 t.test(height~phase_of_flt, data = birds[as.integer(birds$phase_of_flt)>4 & as.integer(birds$phase_of_flt)<7 & !is.na(birds$phase_of_flt),])
 
 ```
-
-
-
-```{r echo=FALSE, fig.asp=0.5}
-#relationship of amount of birds struck with clouds?
-birds$effectYes<- as.factor(birds$effect != "None")
-birds.filtered<-birds[!is.na(birds$effect) & !is.na(birds$sky),]
-
-prop.table(table(birds.filtered$sky,birds.filtered$birds_struck),1)
-ggplot(birds.filtered)+
-  aes(x=birds_struck, fill=sky)+
-  geom_bar(position = "fill")
-```
 For 0 birs struck we have highest percentage of no clouds, so clouds might have an affect on avoiding striking birds. Its about 20% higher compared to 1 bird struck.
 for birdsstruck by sky we can see that with increasing amount of birds the sky tends to be more more overcast, as no clouds and some clouds decreases
 
-#Clouds with birds seen
+## density birdsstuck by height
+```{r echo=FALSE, warning=FALSE, fig.asp=0.5}
+#could include only birds from vys categorization
+#plot height density for Descent and EnRoute
+density <- ggplot(above_ground[!is.na(above_ground$birds_struck),]) +
+  aes(x = height, group=birds_struck,fill=birds_struck)+
+  geom_density(adjust=1.5,alpha=.6) +
+  xlim(0, 3500)
+density
+
+```
+
+## Analysis of birds seen
 
 there are only 2 levels in the data available for birds seen
 
 ```{r echo=FALSE, fig.asp=0.5}
 #relationship of amount of birds seen with clouds?
-table(birds$birds_seen)
+birds_seen_plt <- ggplot(birds[!is.na(birds$time_of_day),])+
+  aes(x=time_of_day, fill=birds_seen)+
+  geom_bar(position = "fill") +
+  theme(legend.position="none")
 
-prop.table(table(birds.filtered$sky,birds.filtered$birds_seen),1)
-ggplot(birds.filtered[!is.na(birds.filtered$birds_seen),])+
-  aes(x=birds_seen, fill=sky)+
-  geom_bar(position = "fill")
+birds_seenNo_sky <- ggplot(birds[!is.na(birds$sky),])+
+  aes(x=sky, fill=birds_seen)+
+  geom_bar(position="fill")
+
+#relationship of seen or not seen with daytime?
+#table(is.na(birds$birds_seen), birds$time_of_day)
+
+birds_seen_plt + birds_seenNo_sky
 ```
+**Time of Day:** Based on the assumption that Missing values in the data for birds_seen stands for the fact that the pilot did not see wildlife before a strike happened, the proportion of birds seen before a strike happened is `r sum(birds$birds_seen!="None")/nrow(birds)`. The contingencytable looks like the following: `addmargins(prop.table(table(birds$birds_seen=="None", birds$time_of_day),2),2,FUN = mean)`. 
 
-the proportion of some clouds is nearly the same, but pilots do more often see bigger groups of birds (11-100) when its overcast compared to small groups
+The proportion of overall birds seen at night is much lower compared to the other times (Dawn, Day, Dusk). And especially large wildlife groups (11-100) are even less likely seen at night compared to smaller groups (2-10).
 
-```{r echo=FALSE, fig.asp=0.5}
-#relationship of amount of birds seen with daytime?
-table(birds$birds_seen)
+**Sky:** the proportion of some clouds is nearly the same, but pilots do more often see bigger groups of birds (11-100) when its overcast compared to small groups
+contradiction: would have expected to see less birds when amount of clouds increases. but especially the amount of birds in groups from 11-100 increases when the amount of clouds increases.
 
-prop.table(table(birds.filtered$time_of_day,birds.filtered$birds_seen),1)
-ggplot(birds.filtered[!is.na(birds.filtered$birds_seen) & !is.na(birds.filtered$time_of_day),])+
-  aes(x=birds_seen, fill=time_of_day)+
-  geom_bar(position = "fill")
+```{r echo=FALSE, fig.asp=0.5, figures-side, fig.show="hold"}
+par(mfrow=c(1,2))
+spineplot(birds$height, birds$birds_seen)
+spineplot(birds$speed, birds$birds_seen)
 ```
-check speed
+The higher the speed & height, the less likely to see a bird before collision
+for height > 2000 foot probability to see a birds before collision decreases 
+for speed > 140 knots probability to see a bird before collision decreases
 
-```{r echo=FALSE, fig.asp=0.5}
-# does speed has an influence on seen? the faster the less likely to see ?
-spineplot(birds$speed, as.factor(is.na(birds$birds_seen)))
-```
-The higher the speed, the less likely to see a bird
-
-### Birds struck out of birds seen
-
-```{r echo=FALSE, fig.asp=0.5}
-#Create new column
-#calculate only when seen is not na
-df <- birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]
-table(birds$birds_seen, birds$birds_struck)
-
-df$birds_struck <- factor(df$birds_struck) 
-
-#mosaic plot better than barplot visualizes also absolute differences
-ggplot(df) +
-  geom_mosaic(aes(x = product( birds_struck,birds_seen ), fill=birds_struck))
-```
+## effect when birdsstruck < birds seen
 
 ```{r echo=FALSE, fig.asp=0.5}
 #Create new column
 #calculate only when seen is not na
-df <- birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]
-table(birds$birds_seen, birds$birds_struck)
+seen_vs_strike <- birds[birds$birds_seen!="None" & !is.na(birds$birds_struck),]
+seen_vs_strike$birds_struck <- factor(seen_vs_strike$birds_struck)
+seen_vs_strike$birds_seen <- factor(seen_vs_strike$birds_seen)
+seen_vs_strike$less_strike_than_seen <- as.factor(as.integer(seen_vs_strike$birds_struck) < as.integer(seen_vs_strike$birds_seen)+2)
 
-df$birds_struck <- factor(df$birds_struck) 
+#TODO: Why is barplot different from ggplot???
+#barplot(prop.table(table(seen_vs_strike$less_strike_than_seen,seen_vs_strike$effectYes),2), xlab = #"less_strike_than_seen")
+#prop.table(table(seen_vs_strike$less_strike_than_seen,seen_vs_strike$effectYes),2)
 
-levels(df$birds_seen)
-levels(df$birds_struck)
-df$difference_seen_strike <- as.integer(df$birds_struck) < as.integer(df$birds_seen)+2
-table(df$difference_seen_strike)
+# phase of flight by birdsstruck < birds seen
+seen_vs_strike_phase <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$phase_of_flt),]) +
+  aes(x=phase_of_flt, fill=less_strike_than_seen) +
+  geom_bar(position = "fill")
 
-barplot(prop.table(table(df$difference_seen_strike,df$effectYes),2))
+#ac_mass by leess-strike-than-seen (MOSAIC)
+seen_vs_strike_ac_mass <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$ac_mass),]) +
+  geom_mosaic(aes(x=product(ac_mass), fill=less_strike_than_seen)) +
+   theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
 
-ggplot(df) +
-  aes(x=difference_seen_strike, fill=effectYes) +
-  geom_bar()
+#num_engs by leess-strike-than-seen (MOSAIC)
+seen_vs_strike_num_engs <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$num_engs),]) +
+  geom_mosaic(aes(x=product(num_engs), fill=less_strike_than_seen)) +
+   theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
+
+seen_vs_strike_phase / (seen_vs_strike_ac_mass + seen_vs_strike_num_engs)
 ```
-
+the num of engines and ac mass have an influence of how much birds are striked out of the birds seen,
+lighter machines and machines with less sngines tend to hit less wildlife out of the seen wildlife. This might be to better maneuvarability of the smaller aircrafts.
 
 ## Analysis of effect variable
 
 ```{r echo=FALSE, fig.asp=0.5}
-ggplot(birds.filtered[!is.na(birds.filtered$birds_struck),]) +
-  aes(x = birds_struck, fill = effectYes) +
-  geom_bar(position="fill")
-
 #comparison right? because we actually want to compare here the positive impact
-ggplot(birds.filtered) +
+birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$effect),]) +
   aes(x = birds_struck, fill = effect) +
   geom_bar(position="fill")
 
@@ -227,44 +245,19 @@ ggplot(birds.filtered) +
 #https://xang1234.github.io/mosaicdiagrams/
 
 #mosaic plot better than barplot visualizes also absolute differences
-ggplot(birds.filtered[!is.na(birds.filtered$ac_mass),]) +
-  geom_mosaic(aes(x = product(ac_mass), fill=effectYes))
+birds_effect_acmass <- ggplot(birds[!is.na(birds$ac_mass) & !is.na(birds$effect),]) +
+  geom_mosaic(aes(x = product(ac_mass), fill=effect)) +
+  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
 
-# Most collisions during the day #genauer betrachten
-ggplot(birds) + 
-  aes(x=time_of_day, fill=birds_struck) + 
-  geom_bar()
+#birdds_seenYes by effect
+birds_effect_seenYes <- ggplot(birds[!is.na(birds$effect),]) +
+  geom_mosaic(aes(x = product(birds_seenYes), fill=effect))+
+  #theme(legend.title = element_blank())
+  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
+
+birds_struck_effect / (birds_effect_acmass + birds_effect_seenYes)
 
 ```
-
-check if clouds have an influence on effect 
-hyptohesis: clouds lead to less vision therefore the pilot might not see the birds
-
-```{r echo=FALSE, fig.asp=0.5}
-prop.table(table(birds.filtered$sky,birds.filtered$effectYes),1)
-ggplot(birds[!is.na(birds$effect) & !is.na(birds$sky),])+
-  aes(x=sky, fill=effectYes)+
-  geom_bar(position = "fill")
-```
-
-results show, that clouds do not have an impact on effect variable, 
-the proportion of effect=true is a little higher for some clouds and overcast
-
 check influence of birds seen on effect variable, we assume NA values as if no birds have been seen before the strike occured
 
-```{r echo=FALSE, fig.asp=0.5}
-#anteil der effect=true vergleichen when seen and not seen
-#...
-effectYes_seen <- ggplot(birds[!is.na(birds$effectYes),]) +
-  aes(x=is.na(birds_seen), fill=effectYes) +
-  geom_bar(position="fill")
-
-#differences in kind of effect?
-effect_seen <- ggplot(birds[!is.na(birds$effect) & birds$effect != "None" ,]) +
-  aes(x=is.na(birds_seen), fill=effect) +
-  geom_bar(position="fill")
-
-effectYes_seen + effect_seen
-
-```
-proportion of effect is a little higher when birds were seen
+proportion of effect is a little higher when birds were seen => contradiction, we would expect to have less amount of effect when pilot is able to see birds before, cause he could 
