@@ -30,14 +30,13 @@ birds[grep(".*EXPRESS.*", birds$operator),]
 plot(machines$ac_mass, machines$num_engs )
 
 #create aircraft statistics
-install.packages("dplyr")
-install.packages("openintro")
+#install.packages("dplyr")
+#install.packages("openintro")
 require(dplyr)
 require(openintro)
 data("birds")
 
-df <- birds[!is.na(birds$height) & !is.na(birds$speed),]
-machines <- df %>%
+machines <- birds[!is.na(birds$height) & !is.na(birds$speed),] %>%
   group_by(atype) %>%
   summarise(max_speed = max(speed),
             max_height = max(height),
@@ -45,6 +44,8 @@ machines <- df %>%
             ac_mass = median(as.integer(ac_mass)))
 
 machines <- as.data.frame(machines)
+aircraft_strike_count <- birds %>% group_by(atype) %>% tally()
+machines<-merge(x = machines, y = aircraft_strike_count, by.x = "atype", by.y = "atype")
 
 machines$num_engs <- factor(machines$num_engs, levels=1:4)
 machines$ac_mass <- factor(machines$ac_mass, levels=1:5)
@@ -56,6 +57,14 @@ machines$ac_mass2 <- factor(machines$ac_mass2, levels=1:3)
 table(machines$ac_mass2)
 table(machines$ac_mass)
 
+top10_aircrafts <- machines %>%
+arrange(desc(n))%>%
+head(10)%>%
+ggplot(aes(x=reorder(atype, n), y=n))+
+  geom_bar(stat="identity", fill="snow3") +
+  coord_flip()
+
+
 ggplot(machines[!is.na(machines$ac_mass),]) +
   aes(x=max_speed, y=max_height, color = ac_mass) +
   geom_point()
@@ -64,15 +73,33 @@ ggplot(machines[!is.na(machines$num_engs),]) +
   aes(x=max_speed, y=max_height, color = num_engs) +
   geom_point()
 
-ggplot(machines[!is.na(machines$ac_mass),]) +
+ggplot(machines[!is.na(machines$ac_mass) & machines$ac_mass!="5",]) +
   aes(x=max_height, y=max_speed, color = ac_mass) +
-  geom_point()
+  geom_point() +
+  geom_smooth(se=FALSE)
+
+ggplot(machines[!is.na(machines$ac_mass) & machines$ac_mass!="5",]) +
+  aes(x=max_speed, y=max_height, color = ac_mass) +
+  geom_point() +
+  geom_smooth()
 
 ggplot(machines[!is.na(machines$ac_mass),]) +
   aes(x=max_height, y=max_speed, color = ac_mass2) +
   geom_point() +
   #geom_smooth(method = lm, se = FALSE)
   geom_smooth()
+
+ggplot(machines[!is.na(machines$ac_mass),]) +
+  aes(x=max_height, y=max_speed) +
+  geom_point() +
+  #geom_smooth(method = lm, se = FALSE)
+  geom_smooth()
+
+ggplot(machines[!is.na(machines$ac_mass),]) +
+  aes(x=max_speed, y=max_height, color = ac_mass) +
+  geom_point() +
+  geom_smooth(aes(x=max_speed, y = max_height, color="black")) +
+  theme(legend.position="top")
 
 ggplot(machines[!is.na(machines$ac_mass2),]) +
  aes(x = max_speed, group=ac_mass2,fill= ac_mass2) +
