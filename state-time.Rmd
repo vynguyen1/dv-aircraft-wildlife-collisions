@@ -3,8 +3,12 @@ title: "DV-State-Time"
 author: "Vy Nguyen"
 date: "7/16/2021"
 output:
-  pdf_document: default
-  html_document: default
+  pdf_document:
+    toc: true
+    toc_depth: 3
+  html_document:
+    toc: true
+    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -44,18 +48,18 @@ theme_set(theme_minimal())
 color_pal<-c("seagreen", "steelblue", "darkred", "orange")
 color_pal_sky<-c("lightgoldenrod","honeydew","skyblue3")
 color_pal_TF<-c("darksalmon","cadetblue")
-color_pal_TOD<-c("paleturquoise","lightgoldenrod","plum2","midnightblue")
+color_pal_TOD<-c("#fed98e","#fff7bc","#d4b9da","#43a2ca")
 theme.title<-theme(
     plot.title = element_text(
       hjust = 0, # 0.5 for center
       size = 12,
-      color = "steelblue",
+      color = "#016c59",
       face = "bold"
     ),
     plot.subtitle = element_text(
       hjust = 0, # 0.5 for center
       size = 10,
-      color = "gray",
+      color = "gray50",
       face = "italic"
     )
   )
@@ -102,24 +106,31 @@ missing_df <- data.frame("column" = names(missing),
                          "count" = missing, row.names = NULL)
 names(missing_df)[2] <- "count"
 ```
+\newpage
 
 # The Data
 
-To begin, we first have a look at the dataset we're working with. This is the *birds* dataset form the *openintro* package. It is a collection of all collisions between aircraft in wildlife that were reported to the US Federal Aviation Administration between 1990 and 1997, with details on the circumstances of the collision. It consists of 19302 observations and 17 variables which are displayed below.  
+To begin, we first have a look at the dataset we're working with. This is the *birds* dataset form the *openintro* package. It is a collection of all collisions between aircraft in wildlife that were reported to the US Federal Aviation Administration between 1990 and 1997, with details on the circumstances of the collision. It consists of 19302 observations and 17 variables which are given in the table below.  
 
 ```{r echo=FALSE}
-knitr::opts_chunk$set(tidy.opts=list(width.cutoff=10), tidy=TRUE)
-str(birds_orig)
+#knitr::opts_chunk$set(tidy.opts=list(width.cutoff=10), tidy=TRUE)
+#str(birds_orig)
+data_table<-data.frame(Variable = c("opid", "operator", "atype", "remarks", "phase_of_flt", "ac_mass", "num_engs", "date", "time_of_day", "state", "height", "speed", "effect", "sky", "species", "birds_seen", "birds_struck"),
+                      Description = c("Three letter identification code for the operator (carrier) of the aircraft.", 
+                                      "Name of the aircraft operator.", "Make and model of aircraft.", "Verbal remarks regarding the collision.", "hase of the flight during which the collision occurred.", "Mass of the aircraft classified in kg.", "Number of engines on the aircraft.", "Date of the collision.", "Light conditions", "Two letter abbreviation of the US state in which the collision occurred.", "Feet above ground level.", "Knots (indicated air speed).", "Effect on flight.", "Type of cloud cover, if any.", "Common name for bird or other wildlife.", "Number of birds/wildlife seen by pilot", "Number of birds/wildlife struck."),
+                      Type = c("Factor w/ 285 levels", "Factor w/ 285 levels", "Factor w/ 284 levels", "Categorical", "Factor w/ 8 levels", "Discrete (1-5)", "Discrete (1-4)", "Categorical", "Factor w/ 4 levels", "Factor w/ 58 levels", "Continuous (0-32500)", "Continuous (0-400)", "Factor w/ 5 levels", "Factor w/ 3 levels", "Factor w/ 241 levels", "Factor w/ 3 levels", "Factor w/ 5 levels"))
+kable(data_table, format="markdown", caption="Variables of the birds dataset")
 ```
 
 We have 11 factor variables, two categorical ones (with one of them being date information), two discrete numeric variables and two continuous variables.
 There are also some missing values which we will look at later.
 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
 ## Some data exploration
 
-To start the analysis we will explore the data and look at some of the variables. We can, for example, plot *height* and *speed* as well as the factor variable *birds_struck*:  
+#To start the analysis we will explore the data and look at some of the variables. We can, for example, plot *height* and *speed* as well as the factor variable *birds_struck*:  
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
 height.plot<-ggplot(birds) + 
   aes(x = height, y = ..density..) + 
   geom_histogram() +
@@ -165,8 +176,9 @@ dat.plot<-ggplot(birds[!is.na(birds$birds_struck) & birds$birds_struck != "0",])
   ) +
   theme.title
 
-(height.plot + speed.plot) / dat.plot
+#(height.plot + speed.plot) / dat.plot
 ```
+\newpage
 
 # Relationship state/wildlife
 
@@ -181,20 +193,22 @@ To begin we looked at the **20 most frequent species** in the whole US. The figu
 top20_plot<-ggplot(as.data.frame(sort(table(birds$species), decreasing = TRUE)[1:20]), aes(y=reorder(Var1, Freq), x=Freq)) + 
   geom_bar(stat="identity", fill="darkolivegreen") + 
   theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
-  labs(title="Top 20 Most Frequent Species",
-       subtitle="Wildlife that aircrafts have collided with the most",
+  labs(title="Top 20 in the U.S.",
+       subtitle="Species that aircrafts have collided with the most",
        x = "Number of Collisions",
        y = "Species") +
+  theme(plot.title.position = "plot") +
   theme.title
 
 # Species in West Virginia collisions
 california_collisions<-birds[birds$state == 'WV',]
 cal_plot<-ggplot(as.data.frame(sort(table(california_collisions$species), decreasing = TRUE)[1:20]), aes(y=reorder(Var1, Freq), x=Freq)) + 
   geom_bar(stat="identity", fill="darkolivegreen") +
-  labs(title="Top 20 in WV",
-       subtitle="Most frequent Wildlife in West Virginia",
+  labs(title="Top 20 in West Virginia",
+       subtitle="Most frequent Wildlife species in WV",
        x = "Number of Collisions",
        y = "") +
+  theme(plot.title.position = "plot") +
   theme.title
 
 top20_plot + cal_plot
@@ -267,6 +281,7 @@ num.coll.map<-ggplot(data=dfs.merged[with(dfs.merged, order(-group, order)), ], 
 
 num.coll.map
 ```
+
 The states with the most collisions seem to be California, Florida, New York and Texas. This is reasonable since those states are the most known ones and there is a lot of air traffic going on: People travel a lot to and from those states so it makes sense that there are the most collisions.  
 
 We then also included the variable *ac_mass* to look at:  
@@ -296,7 +311,7 @@ Here, what's interesting to observe is that collisions of aircrafts with a high 
 
 ## Bird collisions vs. non-bird collisions
 
-We further investigated by dividing the data into strucks with birds and strucks with non-birds/other wildlife. To do this we created another variable called *is.bird*: When "bird" appeared in the *remarks* or the *species* variable (along with other words), or when the height where the collision happened was more than 7 Feet above ground level, we categorized those collisions as bird collisions. The remaining ones were then classified as non-bird ones. In the following we see wordclouds of the bird and non-bird species, the size of the words in regard to their respective frequency in the data. (Top 20 for each, the number of the words have been limited due to size.)  
+We further investigated by dividing the data into strucks with birds and strucks with non-birds/other wildlife. To do this we created another variable called *is.bird*: When "bird" appeared in the *remarks* or the *species* variable (along with other words), or when the height where the collision happened was more than 7 Feet above ground level, we categorized those collisions as bird collisions. The remaining ones were then classified as non-bird ones. In the following we see wordclouds of the bird and non-bird species, the size of the words in regard to their respective frequency in the data. (Top 30 for each, the number of the words have been limited due to size and readability.)  
 
 ``` {r echo=FALSE, include=FALSE}
 is.bird<-grepl("BIRD|DUCK|PIGEON|HAWK|GULL|DOVE|PARROT|SWAN|GEESE|GOOSE|TURKEY|NIGHTJAR|GREBE|CARDINAL|MARTIN|BLUE JAY|CRANE|WHIP-POOR-WILL|TOWHEE|WARBLER|CORMORANT|HARRIER|BUNTING|PHEASANT|SANDPIPER|PELICAN|OSPREY|ANHINGA|WREN|MAGPIE|MANNIKIN|FINCH|ORIOLE|SNIPE|WIGEON|STARLING|AVOCET|GROUSE|BOBWHITE|CROW|TERN|VULTURE|ROBIN|OWL|FALCON|KILLDEER|GRACKLE|MYNA|PLOVER|MALLARD|SWALLOW|EGRET|KESTREL|LARK|SPARROW|HERON|EAGLE|CHICKADEE|MERGANSER", birds.with.statenames$species) | grepl("BIRD", birds.with.statenames$remarks) | birds.with.statenames$height >= 7
@@ -305,18 +320,32 @@ birds.with.statenames$is.bird<-is.bird
 # Species that are bird/non bird
 birds.with.statenames.filt<-birds.with.statenames[!is.na(birds.with.statenames$is.bird),]
 
+set.seed(43)
 is.bird.species<-as.data.frame(table(birds.with.statenames.filt[birds.with.statenames.filt$is.bird,]$species))
-bird_wordcloud<-ggplot(is.bird.species[order(is.bird.species$Freq, decreasing = TRUE),][1:20,], aes(label = Var1, size=Freq)) +
-  geom_text_wordcloud_area(area_corr_power = 1) +
-  labs(subtitle="Frequent bird species") +
-  theme(plot.subtitle = element_text(vjust = - 20))
+bird_wordcloud<-ggplot(is.bird.species[order(is.bird.species$Freq, decreasing = TRUE),][1:30,], aes(label = Var1, size=Freq)) +
+  geom_text_wordcloud_area(area_corr_power = 1) + #, mask = png::readPNG(source="bird.png")) +
+  labs(title="Frequent bird species") +
+  theme(plot.title = element_text(
+      vjust = -30,
+      hjust = 0.5, # 0.5 for center
+      size = 10,
+      color = "darkcyan",
+      face = "bold"
+    )) +
   scale_size_area(max_size = 5)
 
+set.seed(43)
 non.bird.species<-as.data.frame(table(birds.with.statenames.filt[!birds.with.statenames.filt$is.bird,]$species))
-non_bird_wordcloud<-ggplot(non.bird.species[order(non.bird.species$Freq, decreasing = TRUE),][1:20,], aes(label = Var1, size=Freq)) +
-  geom_text_wordcloud_area(area_corr_power = 1) +
-  labs(subtitle="Frequent non-bird species") +
-  theme(plot.subtitle = element_text(vjust = - 20))
+non_bird_wordcloud<-ggplot(non.bird.species[order(non.bird.species$Freq, decreasing = TRUE),][1:30,], aes(label = Var1, size=Freq)) +
+  geom_text_wordcloud_area(area_corr_power = 1) + #, mask = png::readPNG(source="deer.png")) +
+  labs(title="Frequent non-bird species") +
+  theme(plot.title = element_text(
+      vjust = -30,
+      hjust = 0.5, # 0.5 for center
+      size = 10,
+      color = "darkcyan",
+      face = "bold"
+    )) +
   scale_size_area(max_size = 5)
 ```
 ``` {r echo=FALSE}
@@ -415,9 +444,10 @@ nbp<-ggplot(state.coll.bird.nonbird, aes(map_id = state)) +
 We see that, all in all, the states that have the most bird strucks also have the most non-bird strucks. Though states in the midwest and that do not lie on the coastline have a higher ratio of non-bird collisions than those that do.  
 And, what was already quite obvious in the beginning: There are a lot more aircraft-wildlife collisions with birds than other animals (Over 90%). West Virginia has the lowest ratio of all states with approximately 71.28%. This fits with our findings from earlier where we looked at the most frequent species of that state: The white-tailed deer, which is obviously a non-bird animal, was the most common one during aircraft collisions. Though West Virginia doesn't have the most non-bird collisions in absolute values - this spot is taken by Pennsylvania - it has the most in relation to the total number of collisions of the given state.
 
+
 ## Vulture collisions per State
 
-Lastly, for the state/wildlife relationship, we will look at a specific animal, specifically vultures. We look for all collisions with vultures and see which states those happened in. We will look at the proportional values, so the percentage of collisions in a state where vultures were involved in:  
+Lastly, for the state/wildlife relationship, we will look at a specific animal, specifically vultures. We look for all collisions with vultures and see which states those happened in. We will look at the proportional values, so the percentage of collisions in a state where vultures were involved in:   
 
 ```{r echo=FALSE}
 is.vulture<-grepl("VULTURE", birds.with.statenames.filt$species)
@@ -440,8 +470,11 @@ ggplot(is.vulture, aes(map_id = state)) +
 Vultures are more frequent in the South and warm regions which fits with our map above. Their habitat is not in the midwest and hence, there aren't any vulture collisions happening there.  
 
 So all in all, we can see that there is a relationship between wildlife and the state. Depending on where the aircraft collided wih wildlife the most frequent species differ from ech other. We can also extract information about the habitat of certain wildlife with the given data (e.g. vulture example). 
+\newpage
 
 # Timeline
+
+## The date variable
 
 For the last research question we involved the *date* variable of the dataset. We wanted to investigate the following: Have there been any changes over time regarding the wildlife collisions or are there differences depending on the time of year?  
 To do this we first had to perform some feature engineering on *date*: We removed the time part using Regex and formatted it into an actual date variable. We then extracted the month, the year and the weekday into separate variables.  
@@ -465,6 +498,10 @@ kable(map_date, format="markdown", caption="Feature Engineering of the date vari
 
 The above table shows the original *date* variable in the far left column, the other columns are the new variables that *date* has been mapped to.
 We now use those to investigate the data further.  
+
+
+## Monthly and weekly grouping
+
 The number of collisions is used as reference against the different date/time variables and also in regards to the *sky*, the *time_of_day* and the *birds_struck* variable.  
 
 ```{r echo=FALSE}
@@ -475,7 +512,7 @@ month_plot<-ggplot(birds.filt) +
   aes(x = month, group=birds_struck, fill=birds_struck) +
   scale_fill_brewer(palette="Blues") +
   labs(x = "Month", y = "Number of collisions") +
-  theme(axis.title.y=element_blank()) +
+  #theme(axis.title.y=element_blank()) +
   guides(fill=FALSE) +
   scale_y_continuous(breaks=seq(0,3000,2000)) +
   geom_bar()
@@ -512,7 +549,7 @@ month_plot_filt<-ggplot(birds.filt[as.integer(birds.filt$birds_struck) > 3,]) +
 birds.filt$first_half_year<-factor(as.factor(as.numeric(birds.filt$month) <= 6), levels=c(TRUE, FALSE))
 half.year.plot<-ggplot(birds.filt[as.integer(birds.filt$birds_struck) > 3,]) +
   aes(x = as.factor(first_half_year), group=birds_struck, fill=birds_struck) +
-  labs(x = "In the first half of the year", y = "Number of collisions") +
+  labs(x = "Is first half of the year", y = "Number of collisions") +
   guides(fill=guide_legend(title="Birds/Wildlife strucked")) +
   theme(legend.position = "none") +
   scale_fill_manual(values=c("#3182bd", "#08519c")) +
@@ -550,6 +587,7 @@ tod_plot<-ggplot(birds.filt[!is.na(birds.filt$time_of_day),]) +
 ```{r echo=FALSE, fig.asp=0.5}
 (sky_month_plot + tod_plot)
 ```
+
 We can observe that the *sky* variable changes depending on the month: There is less overcast during summer months which is reasonable since generally during summer it rains less.  
 We also see that there are less collisions during the night in the summer. One possible explanation here could be that, at least in the U.S., during summer days are longer and it gets darker later. This would also match with the observation we made jut before with the *sky* variable.
 So just based on this dataset alone we can also see changes in the weather depending on the season.  
@@ -568,8 +606,7 @@ We also examined the proportional number of collisions based on the different we
 
 ## Grouping per Year
 
-For the grouping over the years we will again use the *struck_num* variable from earlier which was based on the *birds_struck* column. We sum up the number of strucked birds/wildlife for each year and display this in a line/point plot. We also do the same again but also divided by each month. Both plots are displayed below.  
-Fazit???
+For the grouping over the years we will again use the *struck_num* variable from earlier which was based on the *birds_struck* column. We sum up the number of strucked birds/wildlife for each year and display this in a line/point plot. We also do the same again but also divided by each month. Both plots are displayed below. 
 
 ```{r echo=FALSE, fig.asp=0.8}
 birds$struck_num<-unclass(birds$birds_struck)
@@ -606,10 +643,10 @@ coll.year.bar<-ggplot(birds.filtered.struck.num, aes(x = year, group = year)) + 
 coll.year / coll.year.month #/ coll.year.bar
 ```
 
-We again see that for almost all years there is an increase in strucked birds in the fall and less collisions in the first half of the year. The reasons for this are mentioned above. With each year the number of collisions increases. However, the result for the years "1998" and "1999" are quite low compared to the previous years. After some research there was no valid reason for this observation as normally wildlife strikes tend to increase over time which we have seen with the previous years. Therefore we assume that, at lest in this dataset, for the years "1998" and "1999" there is data missing, so not as much strikes are reported here.  
+We again see that for almost all years there is an increase in strucked birds in the fall and less collisions in the first half of the year. The reasons for this are the same as above. With each year the number of collisions increases. However, the result for the years "1998" and "1999" are quite low compared to the previous years. After some research we found there was no valid reason for this observation as normally wildlife strikes tend to increase over time as which we have seen with the previous years. Therefore we assume that, at least in this dataset, for the years "1998" and "1999" there are data/reports missing. Especially since the number of collisions for 1999 in total is very close to 0 which is very unlikely to be real.  
 Apart from this, our observation fit with general information that can be found with other sources: Wildlife strikes increase with each year and within a year there are more collisions during the fall/bird migration months.
 
-## Hawk collisions over time
+## Hawk collisions over time and per State
 
 Finally, we pick a wildlife species as example: We want to investigate whether we can see changes for hawk collisions depending on the season (summer/winter) and also if there are any significant observations when we also look at the location.  
 To do this we look for all entries in the dataset where hawks were involved, so where "hawk" appears in *species*. We then divide the data into two dataframes: One where the month is >= 4 and < 10 (so the summer months from April to September) and the other one with the remaining entries.
