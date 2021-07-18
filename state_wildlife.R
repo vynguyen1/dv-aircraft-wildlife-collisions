@@ -154,3 +154,16 @@ ggplot(data=dfs.merged.3[with(dfs.merged.3, order(-group, order)), ], aes(x=long
   coord_fixed(1.3)
 
 # Proportionale Kollisionen?
+
+non.bird.species<-as.data.frame(table(birds.with.statenames[birds.with.statenames$is.bird & !is.na(birds.with.statenames$is.bird),]$species))
+ggplot(non.bird.species[order(non.bird.species$Freq, decreasing = TRUE),], aes(label = Var1, size=Freq)) +
+  geom_text_wordcloud_area() +
+  scale_size_area(max_size = 10)
+
+
+data("love_words_small")
+set.seed(42)
+ggplot(love_words_small, aes(label = word, size = speakers)) +
+  geom_text_wordcloud() +
+  scale_size_area(max_size = 40) +
+  theme_minimal()
