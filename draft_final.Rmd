@@ -3,10 +3,10 @@ title: "Aircraft Wildlife Collisions"
 author: "Alexander Flick & Vy Nguyen"
 date: "21/07/2021"
 output:
-  html_document:
+  pdf_document:
     toc: true
     toc_depth: 3
-  pdf_document:
+  html_document:
     toc: true
     toc_depth: 3
 bibliography: references.bib  
@@ -229,6 +229,7 @@ top50_aircrafts_wordcloud <- ggplot(top50) +
   aes(label = atype, size=n, color=ac_mass, angle=angle) +
   geom_text_wordcloud_area(
     mask = png::readPNG(source="flugzeug6-3.png"),
+    #mask = png::readPNG(source="/Users/Vy/Documents/flugzeug6-3.png"),
     rm_outside = TRUE) +
   scale_size_area(max_size = 3) +
   scale_color_brewer(palette="BuPu") +#scale_color_continuous("Blues") +
