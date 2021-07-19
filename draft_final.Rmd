@@ -3,10 +3,10 @@ title: "Aircraft Wildlife Collisions"
 author: "Alexander Flick & Vy Nguyen"
 date: "21/07/2021"
 output:
-  html_document:
+  pdf_document:
     toc: true
     toc_depth: 3
-  pdf_document:
+  html_document:
     toc: true
     toc_depth: 3
 bibliography: references.bib  
@@ -137,8 +137,9 @@ We have 11 factor variables, two categorical ones (with one of them being date i
 There are also some missing values which we will look at later.
 
 
-## 1.2 Data preparation
+## 1.2 Preparation
 
+#### Data Preparation: 
 Cleaning birds_seen variable: The 9412. observation had one wrong entry in the birds seen variable which has been replaced with NA, because we did not want to introduce a new level for one entry.
 
 Factor Levels: The factor levels of the following variables have been ordered for visualization purposes
@@ -154,6 +155,9 @@ Factor Levels: The factor levels of the following variables have been ordered fo
   + effect: reordering to put "None" effect first and seperate it from the "effect", to achieve a separation between "None" effect and effects
   + phase_of_flt: ordering according from parking, over start of flight to end of flight
   
+#### Preparation for Visualization: 
+Since we wanted to visualize our findings and results in a simple and understandable manner, we were very considerate with the colors and type of plots we used. We looked at different color palettes [@datanovia; @cheatsheet; @colorbrewer] and made sure that colors were distinguishable when comparing different classes, or sequential when in-/decrease was important. We also tried to pick colors that matched with what we wanted to display (e.g. yellow for daylight/no clouds etc.).
+For the states we found that using a map for visualization worked very well, for timelines a lineplot with points was the easiest to interpret, we used scatter, bar-, density-, spine- and mosaicplots for comparing amounts and proportions/ratios and boxplots to compare different levels of a factor variable with each other. And for certain questions wordclouds [@wordcloud] worked the best. We then made sure that axis labels, plot titles and legends were concise and clear.
   
 ## 1.3 Handling missing values
 
@@ -229,7 +233,7 @@ top50 <- machines[order(-machines$n)[1:50],] %>%
 top50_aircrafts_wordcloud <- ggplot(top50) +
   aes(label = atype, size=n, color=ac_mass, angle=angle) +
   geom_text_wordcloud_area(
-    mask = png::readPNG(source="flugzeug6-3.png"),
+    #mask = png::readPNG(source="flugzeug6-3.png"),
     #mask = png::readPNG(source="/Users/Vy/Documents/flugzeug6-3.png"),
     rm_outside = TRUE) +
   scale_size_area(max_size = 3) +
@@ -668,7 +672,7 @@ For the next research question we wanted to explore if there are different kinds
 
 ## 4.1 Species by State
 
-To begin we looked at the **20 most frequent species** in the whole US. The figure shows the number of animals of a specific type which has been displayed in a sorted barplot. We can see that the most frequent species that appear in the data are birds which could not be identified further. Apart from those we can verify the fact that most bird strikes involve birds with big populations, particularly geese and gulls in the United States [@wiki]. The third most frequent animal, for example, are gulls.  
+To begin we looked at the **20 most frequent species** in the whole US. The figure shows the number of animals of a specific type which has been displayed in a sorted barplot. We can see that the most frequent species that appear in the data are birds which could not be identified further (e.g. over 4000 collisions for small unknown birds). Apart from those we can verify the fact that most bird strikes involve birds with big populations, particularly geese and gulls in the United States [@wiki]. The third most frequent animal, for example, are gulls with over 2500 collisions.  
 
 ```{r echo=FALSE, fig.asp=0.7}
 top20_plot<-ggplot(as.data.frame(sort(table(birds$species), decreasing = TRUE)[1:20]), aes(y=reorder(Var1, Freq), x=Freq)) + 
@@ -695,7 +699,7 @@ cal_plot<-ggplot(as.data.frame(sort(table(california_collisions$species), decrea
 top20_plot + cal_plot
 ```
 
-When we compare that with the most frequent species in West Virginia (WV), the most frequent species that aircrafts collided with there is surprisingly not a bird but white-tailed deers. And foxes are also among the list. For the rest there are minor differences, for example European Starlings, Rock Pigeons, Sparrows etc. are still one of the most frequent wildlife animals. However, one can see that for example ducks are not that frequent on in WV compared to the nationwide average. Owls also appear more there than in the US in general.  
+When we compare that with the most frequent species in West Virginia (WV), the most frequent species that aircrafts have collided there with is surprisingly not a bird but the white-tailed deer (Over 30 collisions). And foxes are also among the list. For the rest there are minor differences, for example European Starlings, Rock Pigeons, Sparrows etc. are still one of the most frequent wildlife animals. However, one can see that for example ducks are not that frequent on in WV compared to the nationwide average. Owls also appear more there than in the US in general.  
 
 To further examine the state and species variables we could, for example look at all the collisions where gulls where involved and check what states those happened in the most. This is again displayed in barplots:  
 
@@ -715,7 +719,7 @@ gulls_plot<-ggplot(as.data.frame(sort(table(gulls_collisions$state), decreasing 
 
 top5_gulls<-ggplot(as.data.frame(sort(table(gulls_collisions$state), decreasing = TRUE)[1:5]), aes(y=reorder(Var1, Freq), x=Freq)) + 
   geom_bar(stat="identity", fill="darkseagreen") +
-  labs(subtitle="Top 10 states with most number of gulls collisions",
+  labs(subtitle="Top 5 states with most number of gulls coll.",
        x = "Number of Collisions",
        y = "") + 
   theme.title
@@ -723,12 +727,12 @@ top5_gulls<-ggplot(as.data.frame(sort(table(gulls_collisions$state), decreasing 
 (gulls_plot + top5_gulls)
 ```
 
-When we look at the top states we see that those are all mainly US states that lie on the coastline, for example California, New York and Florida. This therefore makes sense that collisions with gulls happen there a lot since those birds are often found near where the sea is.
+When we look at the top states we see that those are all mainly US states that lie on the coastline, for example California, New York and Florida with between 200 to 300 gulls collisions each. This therefore makes sense that collisions with gulls happen there a lot since those birds are often found near where the sea is [@gulls].
 
 ## 4.2 Collisions per State
 
 We also further examined the **number of collisions per state** which is displayed below.  
-For this, we wanted to display our findings in a map for better visualization. In the following we have displayed the number of collisions, so the variable *birds_struck*, depending on the state. Since this is a factor variable we have unclassed it and mapped the levels to the numeric values below. We then grouped the data by state and summed those up to display in the U.S. map.
+For this, we wanted to display our findings in a map for better visualization [@maps; @polymap]. In the following we have displayed the number of collisions, so the variable *birds_struck*, depending on the state. Since this is a factor variable we have unclassed it and mapped the levels to the numeric values below. We then grouped the data by state and summed those up to display in the U.S. map.
 
 ```{r echo=FALSE, results='asis' }
 map_table<-data.frame(factor = c("1", "2", "3", "4", "5"),
@@ -761,7 +765,7 @@ num.coll.map<-ggplot(data=dfs.merged[with(dfs.merged, order(-group, order)), ], 
 num.coll.map
 ```
 
-The states with the most collisions seem to be California, Florida, New York and Texas. This is reasonable since those states are the most known ones and there is a lot of air traffic going on: People travel a lot to and from those states so it makes sense that there are the most collisions.  
+The states with the most collisions seem to be California, Florida, New York and Texas (each approx. around 4000 strucks). This is reasonable since those states are the most known ones and there is a lot of air traffic going on: People travel a lot to and from those states so it makes sense that there are the most collisions.  
 
 We then also included the variable *ac_mass* to look at:  
 
@@ -781,16 +785,16 @@ state_plot<-ggplot(data = state_plot_df) +
        y = "U.S State") +
   theme.title + 
   theme(legend.position="right") +
-  scale_y_discrete(breaks=every_nth(5))
+  scale_y_discrete(breaks=every_nth(3))
   
 state_plot
 ```
 
-Here, what's interesting to observe is that collisions of aircrafts with a high mass (above 272000 kg) seem to mostly happen in the State of Washington, New York and California. This could be due to the fact that those states are frequently flown to and from, so bigger aircrafts like big passenger planes are used there more than in other states. Another reason could be that there's a big aerospace industry in Washington and the Boeing Everett factory. It's said to be the best state for building boeings.  
+Here, what's interesting to observe is that collisions of aircrafts with a high mass (above 272000 kg) seem to mostly happen in the State of Washington, New York and California. This could be due to the fact that those states are frequently flown to and from, so bigger aircrafts like big passenger planes are used there more than in other states. Another reason could be that there's a big aerospace industry in Washington and the Boeing Everett factory [@washington]. It's said to be the best state for building boeings [@boeings]. This would also fit with our findings from earlier where the most frequent aircraft models in the heaviest *ac_mass* category were Boeings.
 
 ## 4.3 Bird collisions vs. non-bird collisions
 
-We further investigated by dividing the data into **strucks with birds and strucks with non-birds/other wildlife**. To do this we created another variable called *is.bird*: When "bird" appeared in the *remarks* or the *species* variable (along with other words), or when the height where the collision happened was more than 7 Feet above ground level, we categorized those collisions as bird collisions. The remaining ones were then classified as non-bird ones. In the following we see wordclouds of the bird and non-bird species, the size of the words in regard to their respective frequency in the data. (Top 30 for each, the number of the words have been limited due to size and readability.)  
+We further investigated by dividing the data into **strucks with birds and strucks with non-birds/other wildlife**. To do this we created another variable called *is.bird*: When "bird" appeared in the *remarks* or the *species* variable (along with other words), or when the height where the collision happened was more than 7 Feet above ground level, we categorized those collisions as bird collisions. The remaining ones were then classified as non-bird ones. In the following we see wordclouds of the bird and non-bird species, the size of the words in regard to their respective frequency in the data. (The number of the species/words have been limited due to size and readability, only the most frequent ones are displayed.)  
 
 ``` {r echo=FALSE, include=FALSE}
 is.bird<-grepl("BIRD|DUCK|PIGEON|HAWK|GULL|DOVE|PARROT|SWAN|GEESE|GOOSE|TURKEY|NIGHTJAR|GREBE|CARDINAL|MARTIN|BLUE JAY|CRANE|WHIP-POOR-WILL|TOWHEE|WARBLER|CORMORANT|HARRIER|BUNTING|PHEASANT|SANDPIPER|PELICAN|OSPREY|ANHINGA|WREN|MAGPIE|MANNIKIN|FINCH|ORIOLE|SNIPE|WIGEON|STARLING|AVOCET|GROUSE|BOBWHITE|CROW|TERN|VULTURE|ROBIN|OWL|FALCON|KILLDEER|GRACKLE|MYNA|PLOVER|MALLARD|SWALLOW|EGRET|KESTREL|LARK|SPARROW|HERON|EAGLE|CHICKADEE|MERGANSER", birds.with.statenames$species) | grepl("BIRD", birds.with.statenames$remarks) | birds.with.statenames$height >= 7
@@ -808,7 +812,7 @@ bird_wordcloud<-ggplot(is.bird.species[order(is.bird.species$Freq, decreasing = 
       vjust = -30,
       hjust = 0.5,
       size = 10,
-      color = "darkcyan",
+      color = "#016c59",
       face = "bold"
     )) +
   scale_size_area(max_size = 5)
@@ -822,7 +826,7 @@ non_bird_wordcloud<-ggplot(non.bird.species[order(non.bird.species$Freq, decreas
       vjust = -30,
       hjust = 0.5,
       size = 10,
-      color = "darkcyan",
+      color = "#016c59",
       face = "bold"
     )) +
   scale_size_area(max_size = 5)
@@ -852,6 +856,7 @@ map.bird<-ggplot(state.coll.bird.nonbird, aes(map_id = state)) +
   theme.title +
   theme(legend.position="bottom") +
    theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  theme(plot.margin=unit(c(5.5,20,5.5,5.5),"points")) +
   coord_fixed(1.3)
 
 map.non.bird<-ggplot(state.coll.bird.nonbird, aes(map_id = state)) +
@@ -864,6 +869,7 @@ map.non.bird<-ggplot(state.coll.bird.nonbird, aes(map_id = state)) +
   theme(legend.position="bottom") +
   theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank(),
         axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+  theme(plot.margin=unit(c(5.5,5.5,5.5,20),"points")) +
   coord_fixed(1.3)
 
 is.bird.state<-aggregate(birds.with.statenames.filt$is.bird, by=list(region=birds.with.statenames.filt$state.name), FUN=sum)
@@ -884,6 +890,7 @@ map.bird.prop<-ggplot(is.bird.state, aes(map_id = state)) +
   ggtitle('Bird collisions per State') + 
   theme.title +
   theme(legend.position="top") +
+  theme(plot.margin=unit(c(5.5,20,5.5,5.5),"points")) +
   coord_fixed(1.3)
 
 map.non.bird.prop<-ggplot(is.not.bird.state, aes(map_id = state)) +
@@ -896,6 +903,7 @@ map.non.bird.prop<-ggplot(is.not.bird.state, aes(map_id = state)) +
   theme.title +
   theme(legend.position="top") +
   theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+  theme(plot.margin=unit(c(5.5,5.5,5.5,20),"points")) +
   coord_fixed(1.3)
 
 (map.bird.prop + map.non.bird.prop) / (map.bird + map.non.bird)
@@ -927,7 +935,7 @@ ggplot(is.vulture, aes(map_id = state)) +
   coord_fixed(1.3)
 ```
 
-Vultures are more frequent in the South and warm regions which fits with our map above. Their habitat is not in the midwest and hence, there aren't any vulture collisions happening there.  
+Vultures are more frequent in the South and warm regions [@vultures] which fits with our map above. Their habitat is not in the midwest and hence, there aren't any vulture collisions happening there.  
 
 So all in all, we can see that there is a relationship between wildlife and the state. Depending on where the aircraft collided with wildlife the most frequent species differ from each other. We can also extract information about the habitat of certain wildlife with the given data (e.g. vulture example). 
 \newpage
@@ -1090,7 +1098,7 @@ coll.year / coll.year.month
 ```
 
 We again see that for almost all years there is an increase in strucked birds in the fall and less collisions in the first half of the year. The reasons for this are the same as above. With each year the number of collisions increases. However, the result for the years "1998" and "1999" are quite low compared to the previous years. After some research we found there was no valid reason for this observation as normally wildlife strikes tend to increase over time like as we have seen with the previous years. Therefore we assume that, at least in this dataset, for the years "1998" and "1999" there are data/reports missing. Especially since the number of collisions for 1999 in total is very close to 0 which is very unlikely to be real. When looking at the documentation of the Birds dataset [@birds_doc] it also says data from 1999 to 1997. So this is another indicator supporting the claim.  
-Apart from this, our observation fit with general information that can be found with other sources: Wildlife strikes increase with each year and within a year there are more collisions during the fall/bird migration months.
+Apart from this, our observation fit with general information that can be found with other sources [@wiki]: Wildlife strikes increase with each year and within a year there are more collisions during the fall/bird migration months.
 
 ## 5.4 Hawk collisions over Time and by State
 
@@ -1145,7 +1153,7 @@ plot_summer + plot_winter
 ```
 
 We observe that in the northern U.S. states the proportion of hawk strikes during the summer is the highest. Compared to the winter months the ratio of hawk strikes there is the lowest. And the ratio in the Southeast region increases slightly. And overall there seem to be less hawk strikes during the winter.
-This again can be explained with what was mentioned earlier: Hawks are migratory birds as well. During the winter months they travel to the southern regions, hence why there are almost no hawk strikes in the North during winter.
+This again can be explained with what was mentioned earlier: Hawks are migratory birds as well [@hawks]. During the winter months they travel to the southern regions, hence why there are almost no hawk strikes in the North during winter.
 
 By visualizing our findings in a map and dividing by the date variable we were able to further show the migratory behavior of the birds in the U.S. and how this influences the number of collisions and strikes with aircrafts.
 
@@ -1153,15 +1161,19 @@ By visualizing our findings in a map and dividing by the date variable we were a
 
 # Summary
 
-Hier fehlt noch die summary.
+We can see that we can find out a lot about bird strikes and aircraft collisions based on this dataset.  
+We saw that states that people travel to and from the most also have the most collisions. And while birds make up most part of the encountered species, there is a small percentage of strikes that involve non-bird wildlife. Depending on the state the species differ.  
+We were also able to show the habitat of certain wildlife in the U.S. and how this influences the number of collisions and strikes with aircrafts by visualizing this with location data. By taking the time component into account we could also detect that wildlife strikes increase with each year and within a year there are more collisions during the fall/bird migration months. By combining this further with the location data we could also visualize the migratory behavior of the birds.
 
 # Outlook
 
-* bird/non-bird: another dataset to have definite categorization
-* Datensatz mit Anzahl Flügen allgemein für proportionale Angaben
-* Start/Destination des Flugs für Richtung usw.
-* Vergleich mit anderen Ländern
-* Closer look at missing values
+For further data exploration one could consider the following points:
+
+* Use another dataset with definite categorization for distinguishing birds and non-bird wildlife,
+* Use a dataset with the number of flights of airlines (in the U.S.) in general to have proper values for the proportions/ratios of flights with and without collisions.
+* Look for more information about the flights like start and destination for having direction, length of the flight etc. which could be included in further investigation,
+* Compare these results with those of other countries and see if there are any significant differences or similarities or
+* for more clean data: Have a closer look at the missing values and see if anything could be further replaced or imputed.
 
 \newpage
 
