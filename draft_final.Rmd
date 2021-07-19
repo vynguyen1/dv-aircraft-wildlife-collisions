@@ -104,7 +104,7 @@ birds$birds_seen <- factor(birds$birds_seen, levels=factor_seen)
 
 ## 1.1 The Birds Dataset
 
-To begin, we first have a look at the dataset we're working with. This is the *birds* dataset form the *openintro* package [@birds_doc]: It is a collection of all **collisions between aircraft and wildlife** that were reported to the US Federal Aviation Administration **between 1990 and 1997**, with details on the circumstances of the collision. It consists of **19302 observations and 17 variables** which are given in the table below.  
+To begin, we first have a look at the dataset we're working with. This is the *birds* dataset from the *openintro* package [@birds_doc]: It is a collection of all **collisions between aircraft and wildlife** that were reported to the US Federal Aviation Administration **between 1990 and 1997**, with details on the circumstances of the collision. It consists of **19302 observations and 17 variables** which are given in the table below.  
 
 ```{r echo=FALSE}
 data_table<-data.frame(
@@ -140,20 +140,19 @@ There are also some missing values which we will look at later.
 ## 1.2 Preparation
 
 #### Data Preparation: 
-Cleaning birds_seen variable: The 9412. observation had one wrong entry in the birds seen variable which has been replaced with NA, because we did not want to introduce a new level for one entry.
+Cleaning *birds_seen* variable: The 9412th observation had one wrong entry in the *birds_seen* variable which has been replaced with *NA*, because we did not want to introduce a new level for one entry.
 
-Factor Levels: The factor levels of the following variables have been ordered for visualization purposes
+Factor Levels: The factor levels of the following variables have been ordered for visualization purposes.
 
 * Order from low to high: 
   + birds_struck
   + birds_seen
   + sky (by cloudiness)
   + ac_mass
-  + num_engs
-
+  + num_engs \
 * Individual ordering: 
-  + effect: reordering to put "None" effect first and seperate it from the "effect", to achieve a separation between "None" effect and effects
-  + phase_of_flt: ordering according from parking, over start of flight to end of flight
+  + effect: Reordered to put "None" effect first and separate it from the remaining "actual effect", to achieve a separation between "None" effect and effects.
+  + phase_of_flt: Ordered according from parking, over start of flight to end of flight
   
 #### Preparation for Visualization: 
 Since we wanted to visualize our findings and results in a simple and understandable manner, we were very considerate with the colors and type of plots we used. We looked at different color palettes [@datanovia; @cheatsheet; @colorbrewer] and made sure that colors were distinguishable when comparing different classes, or sequential when in-/decrease was important. We also tried to pick colors that matched with what we wanted to display (e.g. yellow for daylight/no clouds etc.).
@@ -161,9 +160,9 @@ For the states we found that using a map for visualization worked very well, for
   
 ## 1.3 Handling missing values
 
-birds_struck: We are using the "remarks" variable to check for spare parts from which we can determine that no wild life has been strike. By doing this we were able to decrease the missing values by 19 (from 39 to 20).
+birds_struck: We are using the "remarks" variable to check for spare parts/hints in text from which we can determine that no wild life has been struck. By doing this we were able to decrease the missing values by 19 (from 39 to 20).
 
-birds_seen: We assume that missing values in the "birds_seen" variable indicate that the pilot did not see wildlife before the strike occurred. Thus, we set all NA values in the "birds_seen" variable as "None". This leads to `r sum(is.na(birds$birds_seen))` values which are set as "None".
+birds_seen: We assume that missing values in the "birds_seen" variable indicate that the pilot did not see wildlife before the strike occurred. Thus, we set all *NA* values in the "birds_seen" variable as "None". This leads to `r sum(is.na(birds$birds_seen))` values which are set as "None".
 
 ```{r echo=FALSE, message=FALSE, fig.asp=0.5}
 #get rows where birds struck is missing
@@ -530,7 +529,7 @@ spineplot(birds$speed, birds$birds_seen,ylab="",yaxlabels = "", xlab = "speed",
 title(main = "Birds seen by speed", cex.main=0.8, font.main= 3, col.main = "gray50")
 ```
 
-Time of Day: Based on the assumption that missing values in the data for birds_seen stands for the fact that the pilot did not see wildlife before a strike happened, the proportion of birds seen before a strike happened is 0.217+0.069=0.286. The contingencytable looks like the following: 
+Time of Day: Based on the assumption that missing values in the data for birds_seen stands for the fact that the pilot did not see wildlife before a strike happened, the proportion of birds seen before a strike happened is 0.217+0.069=0.286. The contingency table looks like the following: 
 
 ```{r echo=FALSE, fig.asp=0.5}
 round(addmargins(prop.table(table(birds$birds_seen, birds$time_of_day),2),2,FUN = mean),3) 
@@ -961,7 +960,7 @@ map_date<-data.frame('original date' = c("09/30/1990 0:00:00", "11/29/1993 0:00:
                       month = c("09", "11"),
                       day=c("So", "Mo"),
                       calendar_week=c("39", "48"))
-kable(map_date, format="markdown", caption="Feature Engineering of the date variable")
+kable(map_date, format="markdown", caption="Examples for Feature Engineering of the date variable")
 ```
 
 The above table shows the original *date* variable in the far left column, the other columns are the new variables that *date* has been mapped to.
@@ -1162,6 +1161,7 @@ By visualizing our findings in a map and dividing by the date variable we were a
 # Summary
 
 We can see that we can find out a lot about bird strikes and aircraft collisions based on this dataset.  
+
 We saw that states that people travel to and from the most also have the most collisions. And while birds make up most part of the encountered species, there is a small percentage of strikes that involve non-bird wildlife. Depending on the state the species differ.  
 We were also able to show the habitat of certain wildlife in the U.S. and how this influences the number of collisions and strikes with aircrafts by visualizing this with location data. By taking the time component into account we could also detect that wildlife strikes increase with each year and within a year there are more collisions during the fall/bird migration months. By combining this further with the location data we could also visualize the migratory behavior of the birds.
 
