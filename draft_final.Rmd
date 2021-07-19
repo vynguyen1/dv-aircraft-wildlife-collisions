@@ -40,6 +40,10 @@ every_nth = function(n) {
   return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
 }
 
+#set working dir to where the current file is located
+dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
+#setwd(dir)
+
 usa <- map_data('usa')
 us.state <- map_data("state")
 df.state <- as.data.frame(cbind(state.abb, state.name))
@@ -224,7 +228,7 @@ top50 <- machines[order(-machines$n)[1:50],] %>%
 top50_aircrafts_wordcloud <- ggplot(top50) +
   aes(label = atype, size=n, color=ac_mass, angle=angle) +
   geom_text_wordcloud_area(
-    mask = png::readPNG(source="C:/Users/Alex/Documents/flugzeug6-3.png"),
+    mask = png::readPNG(source="flugzeug6-3.png"),
     rm_outside = TRUE) +
   scale_size_area(max_size = 3) +
   scale_color_brewer(palette="BuPu") +#scale_color_continuous("Blues") +
@@ -342,13 +346,15 @@ birds_strike_sky <- ggplot(birds[!is.na(birds$sky) & !is.na(birds$birds_struck),
   aes(x=birds_struck, fill=sky)+
   scale_fill_manual(values = color_pal_sky)+
   geom_bar(position = "fill")+
+  theme(axis.text.x = element_text(angle = 90)) +
   labs(title = "Birds struck comparisons",
        subtitle = "Cloudiness by birds struck")
 
 birds_strike_ac_mass <- ggplot(birds[!is.na(birds$ac_mass) & !is.na(birds$birds_struck) & (birds$birds_struck=="0" | as.integer(birds$birds_struck)>3),])+
 aes(x=ac_mass, fill=birds_struck)+
   scale_fill_manual(values=c("#eff3ff", "#3182bd", "#08519c")) +
-  geom_bar(position = "fill")
+  geom_bar(position = "fill") + 
+  labs(subtitle = "Birds struck subset by aircraft mass")
 
 #birds_strike_ac_mass <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ac_mass),]) +
 #  aes(x=ac_mass, fill=birds_struck)+
@@ -360,8 +366,6 @@ birds_strike_sky +birds_strike_ac_mass
 ```
 
 From the plot on the left we can see that with **increasing number of birds_struck the proportion of overcast increases** and the proportion of no clouds decreases. The proportion of some clouds is more or less the same across all groups. From that we can conclude that the higher the amount of birds struck the more clouds and thus we would assume that birds are flying in bigger groups more often when it is cloudy.
-
-
 
 TODO: add Chi-squared independence test for sky and birds struck
 http://www.sthda.com/english/wiki/chi-square-test-of-independence-in-r
@@ -378,7 +382,7 @@ height_by_phase <- ggplot(above_ground) +
   aes(x = phase_of_flt, y = height, fill=phase_of_flt) +
   stat_boxplot(geom="errorbar", width=0.4) +
   scale_fill_brewer(palette="Pastel2") +
-  geom_boxplot() +
+  geom_boxplot(outlier.size = .9) +
   coord_flip() +
   theme(axis.title.y = element_blank())+
   labs(title = "Height distribution for flight phases above ground")+
@@ -439,7 +443,7 @@ birds_seen_plt <- ggplot(birds[!is.na(birds$time_of_day),])+
   scale_fill_brewer(palette="BuGn") +
   theme(legend.position="none", axis.title.y = element_blank()) +
   labs(title="Variables influencing birds seen",
-       subtitle = "Proportion of birds seen by time of day")
+       subtitle = "Proportion of birds seen by time")
 
 birds_seenNo_sky <- ggplot(birds[!is.na(birds$sky),])+
   aes(x=sky, fill=birds_seen)+
