@@ -32,6 +32,9 @@ require(plyr)
 library(dplyr)
 library(forcats)
 library(ggwordcloud)
+library(ggpubr)
+library(grid)
+library(gridExtra)
 
 every_nth = function(n) {
   return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
@@ -78,7 +81,9 @@ birds$effect <- factor(birds$effect, levels=factor_effect)
 
 birds$effectYes<- as.factor(birds$effect != "None")
 
-birds$ac_mass <- as.factor(birds$ac_mass)
+factor_ac_mass <- c("<=2250 kg", "2251-5700 kg", "5701-27000 kg", "27001-272000 kg", ">272000 kg")
+birds$ac_mass <- as.factor(birds$ac_mass)#, levels=factor_ac_mass)
+birds$ac_mass_names <- revalue(as.factor(birds$ac_mass),     c("1"="<2250",        "2"="2251-5700",        "3"="5701-27000",        "4"="27001-272000",       "5"=">272000"))
 birds$num_engs <- as.factor(birds$num_engs)
 
 #birds seen: remove one wrong entry
@@ -183,14 +188,15 @@ ggplot(missing_df) +
 
 The dataset contains `r length(unique(birds$atype))` different aircraft models. We extracted the overall maximum speed and height for each aircraft to get an overview of the aircraft models and the relationship between speed and height. The following left plot shows the Top 50 aircraft models that are causing the most strikes and on the right you can see the speed height relationship of the Top 50 aircrafts colored by their ac_mass.
 
-```{r echo=FALSE, message=FALSE, fig.asp=0.5}
+```{r echo=FALSE, warning=FALSE,message = FALSE,fig.align = "center", fig.asp=0.5}
 
 machines <- birds[!is.na(birds$height) & !is.na(birds$speed),] %>%
   group_by(atype) %>%
   summarise(max_speed = max(speed),
             max_height = max(height),
             num_engs = median(as.integer(num_engs)),
-            ac_mass = median(as.integer(ac_mass)))
+            ac_mass = median(as.integer(ac_mass)),
+            ac_mass_names = median(as.integer(ac_mass_names)))
 
 machines <- as.data.frame(machines)
 aircraft_strike_count <- birds %>% group_by(atype) %>% tally()
@@ -198,6 +204,7 @@ machines<-merge(x = machines, y = aircraft_strike_count, by.x = "atype", by.y = 
 
 machines$num_engs <- factor(machines$num_engs, levels=1:4)
 machines$ac_mass <- factor(machines$ac_mass, levels=1:5)
+machines$ac_mass_names <- factor(machines$ac_mass_names)
 
 machines$ac_mass2 <- ifelse(as.integer(machines$ac_mass)<3,1,ifelse(as.integer(machines$ac_mass)==3,2,3))
 machines$ac_mass2 <- factor(machines$ac_mass2, levels=1:3)  
@@ -217,30 +224,35 @@ top50 <- machines[order(-machines$n)[1:50],] %>%
 top50_aircrafts_wordcloud <- ggplot(top50) +
   aes(label = atype, size=n, color=ac_mass, angle=angle) +
   geom_text_wordcloud_area(
-    mask = png::readPNG(source="flugzeug6-3.png"),
+    mask = png::readPNG(source="C:/Users/Alex/Documents/flugzeug6-3.png"),
     rm_outside = TRUE) +
   scale_size_area(max_size = 3) +
   scale_color_brewer(palette="BuPu") +#scale_color_continuous("Blues") +
   #ggtitle("top 50 aircraft models causing strikes")
-  theme(plot.title = element_text(vjust=-20)) +
-  labs(title="Top 50 aircrafts causing strikes")
+  #theme(plot.title = element_text(vjust=-20)) +
+  labs(
+    title="Top 50 aircrafts involved in collisions",
+    subtitle = "Model types by number of collisions"
+       )
 
 aircraft_speed_height <- ggplot(top50[!is.na(top50$ac_mass),]) +
-
 #aircraft_speed_height <- ggplot(machines[!is.na(machines$ac_mass),]) +
   aes(x=max_speed, y=max_height, color = ac_mass) +
   geom_point() +
   geom_smooth(method = lm, aes(x=max_speed, y = max_height, group = "black", fill = "black", ), se = FALSE) +
-  theme(legend.position="top") +
+  theme(legend.position="right") +
   scale_color_brewer(palette="BuPu") +
-  guides(fill = FALSE) 
-
+  guides(fill = FALSE)+
+  labs(
+    subtitle = "max speed vs. max height"
+  )
+  
 top50_aircrafts_wordcloud + aircraft_speed_height
 ```
 
 The left plot shows that especially the B-737 class (B-737-200,B-737-300) causes the most strikes together with MD-80 and B-727. "B" stands here for Boeing and MD-80 is an aircraft from McDonnell Douglas. The Top model causing strikes is the B-737-300 which caused in total `r top50[1,"n"]` strikes. Unfortunately we do not have the amount of flights and duration of the flight in the data, so we can not do further analysis on this. But we assume, that the aircraft models with higher amount of strikes had also more flights and or longer flights.
 
-From the right plot we can see, that aircraft models with higher max speed are also able to fly higher. This can be also seen from the linear model, that has been estimated by geom_smooth. The correlation of max_speed and height for the Top50 models is: `r cor(top50$max_speed, top50$max_height)`, which is positive and quite high. In addition we can see via the coloring by ac_mass that lighter aircrafts tend to have less max_speed and max_height and that the lighter aircrafts under 5700 kg (ac_mass=2) or even 27000 kg (ac_mass=3) are less prominent. The group with ac_mass=4 (27001-272000 kg) is the most prominent group under the Top50 aircrafts. Two aircraft models with ac_mass = 5 are also present in the Top50 which are the only aircrafts with ac_mass=5.
+From the right plot we can see, that aircraft models with higher max speed are also able to fly higher. This can be also seen from the linear model, that has been estimated by geom_smooth. The correlation of max_speed and height for the Top50 models is: `r round(cor(top50$max_speed, top50$max_height),3)`, which is positive and quite high. In addition we can see via the coloring by ac_mass that lighter aircrafts tend to have less max_speed and max_height. We can also see that the lighter aircrafts under 5700 kg or even 27000 kg are less prominent. The group with ac_mass 27001-272000 kg) is the most prominent group under the Top50 aircrafts. Two aircraft models (B-747-1/200 and B-747-400) with ac_mass of more than 272000 kg are also Boeings and present in the Top50 which are the only aircrafts of that weight class overall.
 
 The next plot shows again the max_speed by max_height splitted by number of engines and colored by ac_mass but for all aircraft models (n=`r nrow(machines)`. Since some models had very few strikes it can happen that they have been assigned an max_height of about 0. 
 
@@ -250,7 +262,11 @@ p <- ggplot(machines[!is.na(machines$num_engs) & !is.na(machines$ac_mass),]) +
   aes(x=max_speed, y=max_height, color = ac_mass) +
   geom_point() +
   scale_color_brewer(palette="BuPu") +
-  theme_bw()
+  theme_bw() +
+  labs(
+    title = "All aircraft models",
+    subtitle = "max speed vs. max height by number of engines"
+  )
 
 p + facet_grid(. ~ num_engs)
 ```
@@ -264,7 +280,7 @@ Interesting is that for aircrafts with num_engs=1, there is no model with a spee
 \newpage
 
 # 3. Analysis of influences for birds_struck, birds_seen and effect
-In the following analysis we will go more into detail about the different conditions regarding the amount of birds that have been struck (variable: birds_struck), the amount of birds that have been seen by the pilot before a strike happened (variable: birds_seen), and the different effects a strike had on the aircraft. We will first start with the analysis of strikes.
+In the following analysis we will go more into detail about the different conditions regarding the amount of birds that have been struck (variable: birds_struck), the amount of birds that have been seen by the pilot before a strike happened (variable: birds_seen), and the different effects a strike had on the aircraft (variable: effect). We will first start with the analysis of strikes.
 
 ## 3.1 Analysis of strikes (birds_struck)
 
@@ -276,7 +292,12 @@ birds_strike_phase <- ggplot(birds[!is.na(birds$phase_of_flt) & !is.na(birds$bir
   scale_fill_brewer(palette="Blues") +
   geom_bar() +
   coord_flip() +
-  theme(legend.position="none")
+  theme(legend.position="none", 
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank(),
+        plot.subtitle = element_text(hjust =1)) +
+  labs(xlab = "phase of flight",
+       subtitle = "Number of collisions by phase of flight")
 
 # Most collisions during the day #genauer betrachten
 birds_strike_time <- ggplot(birds[!is.na(birds$time_of_day) & !is.na(birds$birds_struck),]) + 
@@ -284,24 +305,34 @@ birds_strike_time <- ggplot(birds[!is.na(birds$time_of_day) & !is.na(birds$birds
   scale_fill_brewer(palette="Blues") +
   geom_bar() +
   coord_flip() +
-  theme(legend.position="none")
+  theme(legend.position="none",
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank(),
+        plot.subtitle = element_text(hjust =1)) +
+  labs(xlab = "",
+       subtitle = "Number of collisions by time of day     ")
 
 ### Birds struck out of birds seen
 birds_struck_seen <- ggplot(birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]) +
   geom_mosaic(aes(x = product(birds_seen), fill=birds_struck)) +
   scale_fill_brewer(palette="Blues") +
-  theme(axis.text.y=element_blank(), axis.ticks.y = element_blank(), legend.position="top")
+  theme(axis.text.y=element_blank(), 
+        axis.title.y=element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.x = element_text(angle = 90),
+        legend.position="left")+
+  labs(title = "Birds struck overview",
+       subtitle = "bird struck out of birds seen")
 
 birds_struck_seen + birds_strike_phase / birds_strike_time
 ## descent and en-route are about equal 
 ```
 
-birds_struck out of birds_seen: The mosaicplot shows that the largest group of birds seen is "None" followed by "2-10" and "11-100". So most often we do not see a birds before a strike happens. But if we see something, than according to the data we only see birds in groups, where larger groups of birds are less likely than smaller ones.
-Most often 1 bird is struck. Most interesting here is that if the pilot sees birds for the group birds seen = 2-10 , he hits about 40% of the time less birds and for the group birds seen = 11-100, about 85% of the time the pilot hits less birds than seen. The event of hitting less birds than seen will later be analyzed more in detail.
+The mosaicplot shows that the largest group of birds seen is "None" followed by "2-10" and "11-100". So most often we do not see a birds before a strike happens. But if we see something, than according to the data we only see birds in groups, where larger groups of birds are less likely than smaller ones. Most often 1 bird is struck. Interesting here is that if the pilot sees 2-10 birds, he hits about 40% of the time less birds and for the group birds seen = 11-100, about 85% of the time the pilot hits less birds than seen. The event of hitting less birds than seen will later be analyzed more in detail.
 
-The top right plot shows that most often strikes are occurring during the approach phase and then about equally likely a strike happens the Landing, Climb and Take-Off phase. 
+The top right plot shows that most often strikes are occurring during the approach phase and then about equally likely a strike happens during Landing, Climb and Take-Off phase.
 
-From the bottom right plot we can see that strikes happen most often during the Day with over 10500 occurences followed by Night with about 4500 occurences. Interesting to see is that strikes with larger groups of birds (11-100) 
+From the bottom right plot we can see that strikes happen most often during the Day with over 10500 occurences followed by Night with about 4500 occurences. Interesting to see is that strikes with larger groups of birds (11-100) happpen mostly during the Day (small values are not visible in the plot).
 
 We will now have a look on the influence of the sky variable for the different amounts of birds struck.
 
@@ -310,7 +341,9 @@ We will now have a look on the influence of the sky variable for the different a
 birds_strike_sky <- ggplot(birds[!is.na(birds$sky) & !is.na(birds$birds_struck),])+
   aes(x=birds_struck, fill=sky)+
   scale_fill_manual(values = color_pal_sky)+
-  geom_bar(position = "fill")
+  geom_bar(position = "fill")+
+  labs(title = "Birds struck comparisons",
+       subtitle = "Cloudiness by birds struck")
 
 birds_strike_ac_mass <- ggplot(birds[!is.na(birds$ac_mass) & !is.na(birds$birds_struck) & (birds$birds_struck=="0" | as.integer(birds$birds_struck)>3),])+
 aes(x=ac_mass, fill=birds_struck)+
@@ -326,16 +359,18 @@ aes(x=ac_mass, fill=birds_struck)+
 birds_strike_sky +birds_strike_ac_mass
 ```
 
-From the plot we can see that with increasing number of birds_struck the proportion of overcast increases and the proportion of no clouds decreases. The proportion of some clouds is more or less the same across all groups. From that we can conclude that the higher the amount of birds struck the more clouds and thus we would assume that birds are flying in bigger groups more often when it is cloudy.
+From the plot on the left we can see that with **increasing number of birds_struck the proportion of overcast increases** and the proportion of no clouds decreases. The proportion of some clouds is more or less the same across all groups. From that we can conclude that the higher the amount of birds struck the more clouds and thus we would assume that birds are flying in bigger groups more often when it is cloudy.
+
+
 
 TODO: add Chi-squared independence test for sky and birds struck
 http://www.sthda.com/english/wiki/chi-square-test-of-independence-in-r
 
 We will now have a look on the height variable together with phase of flight.
 
-### 3.1.1 Closer look on the Phases of Flight
+### 3.1.1 Closer look on height of collisions
 
-The plot on the left shows a boxplot of height for flight phases, which are above ground and on the right side we will have a closer on the height for the flight phases "En Route" and "Descent".
+The top plot shows a boxplot of height for flight phases, which are above ground and on the bottom we will have a closer look on the height for the flight phases "En Route" and "Descent", because they show the most variability in height.
 
 ```{r echo=FALSE, fig.asp=0.5, warning=FALSE}
 above_ground <- birds[as.integer(birds$phase_of_flt)>3 & as.integer(birds$phase_of_flt)<8 & !is.na(birds$phase_of_flt),]
@@ -343,34 +378,41 @@ height_by_phase <- ggplot(above_ground) +
   aes(x = phase_of_flt, y = height, fill=phase_of_flt) +
   stat_boxplot(geom="errorbar", width=0.4) +
   scale_fill_brewer(palette="Pastel2") +
-  geom_boxplot()
+  geom_boxplot() +
+  coord_flip() +
+  theme(axis.title.y = element_blank())+
+  labs(title = "Height distribution for flight phases above ground")+
+  ylim(0,20000)
 # Heights during Descent are on average higher than 
 # hypothesis: Collisions happen more often during Descent and are therefore more prominent in the data set?
 
 #plot height density for Descent and EnRoute
 density <- ggplot(birds[birds$phase_of_flt== "Descent" | birds$phase_of_flt=="En Route",]) +
   aes(x = height, group=phase_of_flt,fill=phase_of_flt ) +
-  scale_fill_manual(values=c("#fdcdac", "#cbd5e8")) +
-  geom_density(adjust=1.5,alpha=.8)
+  scale_fill_brewer(palette='Pastel2') +
+  geom_density(adjust=1.5,alpha=.8) +
+  xlim(0,20000)
 
-height_by_phase + density
+height_by_phase / density
 
 ```
 
 The height distribution for Climb and Approach are very similar and their medians are very close to the ground. 
-The other two boxplots for "En Route" and "Descent" are more far away from ground. Interesting here is that the 25% quantile of the Descent" Boxplot is above the one from "En Route", same for the median and 75% quantile. 
+The other two boxplots for "En Route" and "Descent" are more far away from ground. Interesting here is that the 25% quantile of the "Descent" Boxplot is above the one from "En Route", same for the median and 75% quantile. 
 
 We are performing a t.test to compare the two groups and check for equality.
 
-t.test
 ```{r echo=FALSE, fig.asp=1}
 #Two sample t.test for height dependent on phase of flight ("Descent" and "En Route")
 t.test(height~phase_of_flt, data = birds[as.integer(birds$phase_of_flt)>4 & as.integer(birds$phase_of_flt)<7 & !is.na(birds$phase_of_flt),])
 ```
 
-The T-Test also show that the group means are different from each other. But surprisingly the mean in Group "Descent" is higher than mean of "En Route". One would actually expect that the height is smaller than in "En Route" because the Descent phase happens after the "En Route" phase where the aircraft is loosing height to prepare for approach. So since all aircrafts have to be in the phase "En Route" before going over to "Descent" we can say that it is more likely to hit a bird in greater height when being in phase "Descent" rather than in "En Route". The main difference between these flight phases is that the aircraft is not flying parralel to the ground when being in phase "Descent".
+The T-Test also show that the group means are different from each other. But surprisingly the **mean in group "Descent" is higher** than mean of "En Route". One would actually expect that the height is smaller than in "En Route" because the Descent phase happens after the "En Route" phase where the aircraft is loosing height to prepare for approach or during flight in general. So since all aircrafts have to be in the phase "En Route" before going over to "Descent" we can say that it is more likely to hit a bird in greater height when being in phase "Descent" rather than in "En Route". The main difference between these flight phases is that the aircraft is not flying parallel to the ground when being in phase "Descent". So the **angle of the aircraft during the flight is most likely having an influence on hitting birds**. And especially a negative angle increases the probability of hitting birds, based on the findings here and from 3.1.1 by comparing the number of collisions by phase of flight.
 
 ### 3.1.2 density birdsstuck by height for flight phases above ground (Climb, En Route, Descent, Approach)
+
+We will now have another look on the density of height, but this time split by the different numbers of birds involved in the collision. The following plot shows exactly this.
+
 ```{r echo=FALSE, warning=FALSE, fig.asp=0.5}
 #could include only birds from vys categorization
 #plot height density for Descent and EnRoute
@@ -378,16 +420,16 @@ density <- ggplot(above_ground[!is.na(above_ground$birds_struck),]) +
   aes(x = height, group=birds_struck,fill=birds_struck)+
   geom_density(adjust=1.5,alpha=.6) +
   scale_fill_brewer(palette="Blues") +
-  theme(legend.position = "top") + 
-  xlim(0, 3500)
+  theme(legend.position = "right") + 
+  xlim(0, 3500) +
+  labs(title = "Density of height for flight phases above ground", subtitle = "for height less than 3500 foot, by birds_struck")
 density
 ```
-
-Peek for "Over 100" birds struck at a height of about 1800 foot is due to the small amount of observations from that category. But nevertheless 8 out of 17 strikes happened here. 
+The density plot shows a **high peek at the beginning at about 100 foot** for all categories of birds_struck greater 0. This is, because most of the collisions happen near ground level at flight phases Take-Off, Climb, Approach and Landing Roll (see 3.1 Number of collisions by pflight phase). For birds_struck=0 the distribution is a little bit different from the others with a density of about 0.0016 from 150 foot to 500 foot. Remarkable is also the **peek for "Over 100" birds struck at a height of about 1800 foot**. For the "Over 100" category we have the lowest amount of observations in the dataset but nevertheless 4 out of 8 strikes happened here. Unfortunately we have mostly missing values in the variable species for these observations, so we can not get any information about the birds species.
 
 ## 3.2 Analysis of birds seen
 
-there are only 2 levels in the data available for birds seen
+there are only two levels in the data available for birds seen and we added one level for the missing values. The two plots show the proportion of birds seen by the time of day (left plot) and the cloudiness of the sky (right plot).
 
 ```{r echo=FALSE, fig.asp=0.5}
 #relationship of amount of birds seen with clouds?
@@ -395,12 +437,16 @@ birds_seen_plt <- ggplot(birds[!is.na(birds$time_of_day),])+
   aes(x=time_of_day, fill=birds_seen)+
   geom_bar(position = "fill") +
   scale_fill_brewer(palette="BuGn") +
-  theme(legend.position="none")
+  theme(legend.position="none", axis.title.y = element_blank()) +
+  labs(title="Variables influencing birds seen",
+       subtitle = "Proportion of birds seen by time of day")
 
 birds_seenNo_sky <- ggplot(birds[!is.na(birds$sky),])+
   aes(x=sky, fill=birds_seen)+
   scale_fill_brewer(palette="BuGn") +
-  geom_bar(position="fill")
+  geom_bar(position="fill") +
+   theme(axis.title.y = element_blank()) +
+  labs(subtitle = "Proportion of birds seen by sky")
 
 #relationship of seen or not seen with daytime?
 #table(is.na(birds$birds_seen), birds$time_of_day)
@@ -408,28 +454,40 @@ birds_seenNo_sky <- ggplot(birds[!is.na(birds$sky),])+
 birds_seen_plt + birds_seenNo_sky
 ```
 
-**Time of Day:** Based on the assumption that Missing values in the data for birds_seen stands for the fact that the pilot did not see wildlife before a strike happened, the proportion of birds seen before a strike happened is `r sum(birds$birds_seen!="None")/nrow(birds)`. The contingencytable looks like the following: 
+Time of Day: Based on the assumption that missing values in the data for birds_seen stands for the fact that the pilot did not see wildlife before a strike happened, the proportion of birds seen before a strike happened is 0.217+0.069=0.286. The contingencytable looks like the following: 
 
 ```{r echo=FALSE, fig.asp=0.5}
-addmargins(prop.table(table(birds$birds_seen=="None", birds$time_of_day),2),2,FUN = mean) 
+round(addmargins(prop.table(table(birds$birds_seen, birds$time_of_day),2),2,FUN = mean),3) 
 ```
 
-The proportion of overall birds seen at night is much lower compared to the other times (Dawn, Day, Dusk). And especially large wildlife groups (11-100) are even less likely seen at night compared to smaller groups (2-10).
+The proportion of overall **birds seen at night is much lower** compared to the other times (Dawn, Day, Dusk). And especially large wildlife groups (11-100) are even less likely seen at night compared to smaller groups (2-10).
 
-**Sky:** the proportion of some clouds is nearly the same, but pilots do more often see bigger groups of birds (11-100) when its overcast compared to small groups
-contradiction: would have expected to see less birds when amount of clouds increases. but especially the amount of birds in groups from 11-100 increases when the amount of clouds increases.
+**Sky:** the proportion of **birds seen increases with cloudiness**. This is a **contradiction** to what we would have expected. We would have thought that with increasing cloudiness the amount of birds seen decreases, due to the fact that the pilot can not see as good as when there are less or no clouds. So one reason for this could be that most of the pilots aren't within the area of clouds when the collision happens, but have recorded the cloudiness of the sky. Another reason could be that birds in groups fly more often when its cloudy.
+
+The following two spineplots show the two continious variables height and speed by the number of birds seen. 
 
 ```{r echo=FALSE, fig.asp=0.5, figures-side, fig.show="hold"}
-par(mfrow=c(1,2),las = 2, cex.axis = 0.75, mar = c(7, 4.1, 4.1, 2.1))
-spineplot(birds$height, birds$birds_seen, ylab = "birds_seen", xlab = "height", col = rev(brewer.pal(n=3,name="BuGn")))
-spineplot(birds$speed, birds$birds_seen, ylab = "birds_seen", xlab = "speed",col = rev(brewer.pal(n=3,name="BuGn")))
+par(mfrow=c(1,3))#,las = 2, cex.axis = 0.75, mar = c(7, 4.1, 4.1, 2.1))
+spineplot(birds$height, birds$birds_seen, ylab="", yaxlabels = "", xlab = "height", col = rev(brewer.pal(n=3,name="BuGn")), main = "Birds seen by height")
+spineplot(birds$speed, birds$birds_seen,ylab="",yaxlabels = "", xlab = "speed",
+          col = rev(brewer.pal(n=3,name="BuGn")), main = "Birds seen by speed")
+
+# Extract the legend. Returns a gtable
+leg <- get_legend(birds_seenNo_sky)
+# Convert to a ggplot and print
+vp.BottomRight <- viewport(y=0.5, x=.8)
+print(as_ggplot(leg), vp=vp.BottomRight)
 ```
 
-The higher the speed & height, the less likely to see a bird before collision
-for height > 2000 foot probability to see a birds before collision decreases 
-for speed > 140 knots probability to see a bird before collision decreases
+The higher the speed & height, the less likely to see a bird before collision: 
+* for height > 2000 foot, the probability to see a birds before collision decreases 
+* for speed > 140 knots, the probability to see a bird before collision decreases
 
-## 3.3 effect when birdsstruck < birds seen
+## 3.3 Influences when birdsstruck < birds seen
+
+In the following we will have a closer look on a self-generated variable, which compares the amount of birds seen with the amount of birds_struck. It will be true if the number of birds struck is smaller than birds seen and false if not. In the beginning we have already seen, that the number of birds_seen does not always infer that the same amount of birds were struck. By using this variable, we want to have a look at what influences the proportion of striking less birds than seen.
+
+The plot on the left shows the proportion of less strikes than seen by phase of flight. On the top right we can see a comparison of the proportion of less strikes by the aircraft mass and on the bottom right we compare it by different number of engines.
 
 ```{r echo=FALSE, fig.asp=0.5}
 #Create new column
@@ -449,8 +507,11 @@ seen_vs_strike_phase <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$phase_of_flt
   scale_fill_manual(values = color_pal_TF)+
   geom_bar(position = "fill") +
   coord_flip() +
-  theme(legend.position="top")
-  
+  theme(legend.position="right", axis.title.y = element_blank())+
+  labs(title="Variables influencing less strikes than seen",
+       subtitle = "Proportion of less strike than seen \nby phase of flight",
+       fill='less strike \nthan seen'
+       )
 
 #ac_mass by leess-strike-than-seen (MOSAIC)
 seen_vs_strike_ac_mass <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$ac_mass),]) +
@@ -468,18 +529,24 @@ seen_vs_strike_num_engs <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$num_engs)
 
 seen_vs_strike_phase + seen_vs_strike_ac_mass / seen_vs_strike_num_engs
 ```
-
-the num of engines and ac mass have an influence of how much birds are striked out of the birds seen,
-lighter machines and machines with less sngines tend to hit less wildlife out of the seen wildlife. This might be to better maneuvarability of the smaller aircrafts.
+Comparing less strike than seen across phases of flight we can see, that "En Route" it is about 12% more likely to strike less birds than seen compared to "Descent". So it is not even less likely to strike birds in general, but also to strike less birds than seen.
+The num of engines and ac mass have an influence of how much birds are striked out of the birds seen,
+lighter machines and machines with less engines tend to hit less wildlife out of the seen wildlife. This might be due to better maneuvarability of the lighter aircrafts. Most prominent are aircrafts with ac_mass = 4 (27001-272000 kg) and two engines.
 
 ## 3.4 Analysis of effect variable
+
+The top plot shows the different proportions of effect for each category of birds_struck. The Bottom left plot shows the proportions of each effect by the aircraft mass and on the bottom right we compare effect with birds_seen or not seen. 
 
 ```{r echo=FALSE, fig.asp=0.5}
 #comparison right? because we actually want to compare here the positive impact
 birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$effect),]) +
   aes(x = birds_struck, fill = effect) +
   scale_fill_brewer(palette="OrRd") +
-  geom_bar(position="fill")
+  geom_bar(position="fill") +
+  labs(
+    title = "Variables influencing effect",
+    subtitle = "Effect by number of birds struck"
+  )
 
 #mosaic in ggplot2
 #https://xang1234.github.io/mosaicdiagrams/
@@ -488,22 +555,32 @@ birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ef
 birds_effect_acmass <- ggplot(birds[!is.na(birds$ac_mass) & !is.na(birds$effect),]) +
   geom_mosaic(aes(x = product(ac_mass), fill=effect)) +
   scale_fill_brewer(palette="OrRd") +
-  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
+  theme(legend.position="none", 
+        axis.text.y=element_blank(), 
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(subtitle = "Effect by aircraft mass")
 
 #birdds_seenYes by effect
 birds_effect_seenYes <- ggplot(birds[!is.na(birds$effect),]) +
   geom_mosaic(aes(x = product(birds_seenYes), fill=effect))+
   scale_fill_brewer(palette="OrRd") +
   #theme(legend.title = element_blank())
-  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())
+  theme(legend.position="none", 
+        axis.text.y=element_blank(), 
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(xlab= "birds seen?", subtitle = "Effect by birds seen or not")
 
 birds_struck_effect / (birds_effect_acmass + birds_effect_seenYes)
 
 ```
 
-check influence of birds seen on effect variable, we assume NA values as if no birds have been seen before the strike occured
+birds_struck: The greater the number of birds struck, the more likely that the collision has an effect on the aircraft. Especially the proportion of "Precautionary Landing" increases. For birds_struck 0 we have very small proportion of "None" effect and high proportion of "Other" and "Aborted Take-off".
 
-proportion of effect is a little higher when birds were seen => contradiction, we would expect to have less amount of effect when pilot is able to see birds before, cause he could 
+ac_mass: the higher the aircraft mass the less likely the collision has an effect on the aircraft.
+
+birds_seenYes: The "None" proportion of effect is a little smaller when the pilot has seen birds before the strike and Precautionary Landing and Aborted Take-off are a little higher. We would have actually expected to have less effects on the aircraft when the pilot has seen birds before the strike. But from the description of the dataset we can not really find out what is meant by the effect variable. Does "Precautionary landing" and "Aborted take-off" mean that the pilot did this to prevent striking birds, or did he had to do this because of the collision. When birds were seen we would expect to have less amount of effect on the aircraft, cause he could try to dodge the birds or abort take off/ land precautionary. 
 
 \newpage
 
