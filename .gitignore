@@ -1,3 +1,4 @@
 # Ignored files
 *.html
 *.DS_Store
+*.Rhistory
