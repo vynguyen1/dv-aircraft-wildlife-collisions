@@ -85,9 +85,13 @@ birds$effect <- factor(birds$effect, levels=factor_effect)
 
 birds$effectYes<- as.factor(birds$effect != "None")
 
-factor_ac_mass <- c("<=2250 kg", "2251-5700 kg", "5701-27000 kg", "27001-272000 kg", ">272000 kg")
-birds$ac_mass <- as.factor(birds$ac_mass)#, levels=factor_ac_mass)
-birds$ac_mass_names <- revalue(as.factor(birds$ac_mass),     c("1"="<2250",        "2"="2251-5700",        "3"="5701-27000",        "4"="27001-272000",       "5"=">272000"))
+#factor_ac_mass <- c("<=2250 kg", "2251-5700 kg", "5701-27000 kg", "27001-272000 kg", ">272000 kg")
+#birds$ac_mass <- as.factor(birds$ac_mass)#, levels=factor_ac_mass)
+#birds$ac_mass_names <- revalue(as.factor(birds$ac_mass),     c("1"="<2250",        "2"="2251-5700",        "3"="5701-27000",        "4"="27001-272000",       "5"=">272000"))
+
+ac_mass_names<- c("1"="< 2.25 t", "2"="2.25-5.7 t", "3"="5.7-27 t", "4"="27-272 t", "5"="> 272 t")
+birds$ac_mass_renamed<-revalue(as.factor(birds$ac_mass), ac_mass_names)
+
 birds$num_engs <- as.factor(birds$num_engs)
 
 #birds seen: remove one wrong entry
@@ -99,6 +103,15 @@ birds$birds_seen <- factor(birds$birds_seen, levels=factor_seen)
 ```
 
 \newpage
+
+# Introduction
+
+In this paper we want to investigate a dataset of aircraft-wildlife collisions in the U.S. in the 90s. We start by introducing the data and some steps we took regarding data preparation.
+For our analysis we then first take a look at what kind of aircrafts are frequently involved in bird/wildlife strikes. After that we examine what kind of circumstances lead to such collisions and if there are any dependencies between certain variables.
+In the following chapter we then also take location into account to analyze if this has any influence on the kind of wildlife involved in the collisions.
+For the last research topic we focus on the time variable and put that in relation to the previous results.
+
+We then finish with a summary of our findings and further research questions that could possibly be further analyzed in the future.
 
 # 1. The Data
 
@@ -164,7 +177,7 @@ birds_struck: We are using the "remarks" variable to check for spare parts/hints
 
 birds_seen: We assume that missing values in the "birds_seen" variable indicate that the pilot did not see wildlife before the strike occurred. Thus, we set all *NA* values in the "birds_seen" variable as "None". This leads to `r sum(is.na(birds$birds_seen))` values which are set as "None".
 
-```{r echo=FALSE, message=FALSE, fig.asp=0.5}
+```{r echo=FALSE, message=FALSE, fig.asp=0.4}
 #get rows where birds struck is missing
 df <- birds[is.na(birds$birds_struck), 
             c("remarks", "birds_seen", "effect", "birds_struck")]
@@ -204,7 +217,7 @@ machines <- birds[!is.na(birds$height) & !is.na(birds$speed),] %>%
             max_height = max(height),
             num_engs = median(as.integer(num_engs)),
             ac_mass = median(as.integer(ac_mass)),
-            ac_mass_names = median(as.integer(ac_mass_names)))
+            ac_mass_renamed = median(as.integer(ac_mass_renamed)))
 
 machines <- as.data.frame(machines)
 aircraft_strike_count <- birds %>% group_by(atype) %>% tally()
@@ -212,19 +225,7 @@ machines<-merge(x = machines, y = aircraft_strike_count, by.x = "atype", by.y = 
 
 machines$num_engs <- factor(machines$num_engs, levels=1:4)
 machines$ac_mass <- factor(machines$ac_mass, levels=1:5)
-machines$ac_mass_names <- factor(machines$ac_mass_names)
-
-machines$ac_mass2 <- ifelse(as.integer(machines$ac_mass)<3,1,ifelse(as.integer(machines$ac_mass)==3,2,3))
-machines$ac_mass2 <- factor(machines$ac_mass2, levels=1:3)  
-
-top10_aircrafts_bar <- machines %>%
-arrange(desc(n)) %>%
-head(10) %>%
-ggplot(aes(x=reorder(atype, n), y=n, fill = ac_mass))+
-  geom_bar(stat="identity") +
-  theme(legend.position="none") +
-  labs(title= "Top 10 frequent strikes by aircraft", x="aircraft model") +
-  coord_flip()
+machines$ac_mass_renamed <- revalue(factor(machines$ac_mass_renamed, levels=1:5), ac_mass_names)
 
 set.seed(43)
 top50 <- machines[order(-machines$n)[1:50],] %>% 
@@ -232,8 +233,8 @@ top50 <- machines[order(-machines$n)[1:50],] %>%
 top50_aircrafts_wordcloud <- ggplot(top50) +
   aes(label = atype, size=n, color=ac_mass)+#, angle=angle) +
   geom_text_wordcloud_area(
-    #mask = png::readPNG(source="flugzeug6-3.png"),
-    #mask = png::readPNG(source="/Users/Vy/Documents/flugzeug6-3.png"),
+    mask = png::readPNG(source="flugzeug6-3.png"),
+    #mask = png::readPNG(source="/Users/Vy/Documents/R_Projects/Data_Visualization/flugzeug6-3.png"),
     rm_outside = TRUE) +
   scale_size_area(max_size = 3) +
   scale_color_brewer(palette="BuPu") +
@@ -247,11 +248,11 @@ top50_aircrafts_wordcloud <- ggplot(top50) +
 
 aircraft_speed_height <- ggplot(top50[!is.na(top50$ac_mass),]) +
 #aircraft_speed_height <- ggplot(machines[!is.na(machines$ac_mass),]) +
-  aes(x=max_speed, y=max_height, color = ac_mass) +
+  aes(x=max_speed, y=max_height, color = ac_mass_renamed) +
   geom_point() +
   geom_smooth(method = lm, aes(x=max_speed, y = max_height, group = "black", fill = "black", ), se = FALSE) +
   theme(legend.position="right") +
-  scale_color_brewer(palette="BuPu") +
+  scale_color_brewer(name="ac_mass in tons", palette="BuPu") +
   guides(fill = FALSE)+
   theme.title+
   labs(
@@ -268,11 +269,10 @@ From the right plot we can see, that aircraft **models with higher max speed are
 The next plot shows again the max_speed by max_height splitted by number of engines and colored by ac_mass but for all `r nrow(machines)` aircraft models. Since some models had very few strikes it can happen that they have been assigned an max_height of about 0.
 
 ```{r echo=FALSE, fig.asp=0.5}
-machines_c <- machines[complete.cases(machines),]
 p <- ggplot(machines[!is.na(machines$num_engs) & !is.na(machines$ac_mass),]) +
-  aes(x=max_speed, y=max_height, color = ac_mass) +
+  aes(x=max_speed, y=max_height, color = ac_mass_renamed) +
   geom_point() +
-  scale_color_brewer(palette="BuPu") +
+  scale_color_brewer(name="ac_mass in tons", palette="BuPu") +
   theme(plot.title = element_text(
       hjust = 0, 
       size = 12,
@@ -398,7 +398,7 @@ birds_struck_minorities <- birds[!is.na(birds$ac_mass) & !is.na(birds$birds_stru
 birds_struck_minorities$birds_struck <- droplevels(birds_struck_minorities$birds_struck)
 
 birds_strike_ac_mass <- ggplot(birds_struck_minorities)+
-aes(x=ac_mass, fill=birds_struck)+
+aes(x=ac_mass_renamed, fill=birds_struck)+
   #scale_fill_manual(values=c("#eff3ff", "#3182bd", "#08519c")) +
   scale_fill_manual(values=brewer.pal(6,"Blues")[c(1,4,5)]) +
   geom_bar(position = "fill") +
@@ -407,7 +407,9 @@ aes(x=ac_mass, fill=birds_struck)+
             size = 2.3,
             position=position_fill(vjust = 0.5))+
   theme.title+
-  labs(subtitle = "Birds struck (subset) by aircraft mass")
+  labs(subtitle = "Birds struck (subset) by aircraft mass") + 
+  xlab("ac_mass in tons") + 
+  theme(axis.text.x = element_text(angle = 90))
 
 #birds_strike_ac_mass <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ac_mass),]) +
 #  aes(x=ac_mass, fill=birds_struck)+
@@ -504,7 +506,7 @@ birds_seen_plt <- ggplot(birds[!is.na(birds$time_of_day),])+
   geom_text(aes(label=ifelse(round(..count../time_sums,2) > 0.1,round(..count../time_sums,2) , "")),
             stat='count',
             size = 3,
-            position=position_fill(vjust = 0.5))+
+           position=position_fill(vjust = 0.5))+
   scale_fill_brewer(palette="BuGn") +
   theme(legend.position="none", axis.title.y = element_blank()) +
   theme.title+
@@ -553,7 +555,7 @@ In the following we will have a closer look on a self-generated variable, which 
 
 The plot on the left shows the proportion of less strikes than seen by phase of flight. On the top right we can see a comparison of the proportion of less strikes by the aircraft mass and on the bottom right we compare it by different number of engines.
 
-```{r echo=FALSE, fig.asp=0.5}
+```{r echo=FALSE, fig.asp=0.3}
 #Create new column
 #calculate only when seen is not na
 seen_vs_strike <- birds[birds$birds_seen!="None" & !is.na(birds$birds_struck),]
@@ -581,7 +583,7 @@ seen_vs_strike_phase <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$phase_of_flt
             stat='count',
             size = 3,
             position=position_fill(vjust = 0.5))+
-  coord_flip() +
+  #coord_flip() +
   theme(legend.position="right", axis.title.y = element_blank())+
   theme.title+
   labs(title="Variables influencing less strikes than seen",
@@ -589,21 +591,24 @@ seen_vs_strike_phase <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$phase_of_flt
        fill='less strike \nthan seen'
        )
 
-#ac_mass by leess-strike-than-seen (MOSAIC)
+#ac_mass by less-strike-than-seen (MOSAIC)
 seen_vs_strike_ac_mass <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$ac_mass),]) +
-  geom_mosaic(aes(x=product(ac_mass), fill=less_strike_than_seen)) +
+  geom_mosaic(aes(x=product(ac_mass_renamed), fill=less_strike_than_seen)) +
   scale_fill_manual(values = color_pal_TF)+
-  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank())+
-  ylab("")
+  theme(legend.position="none", axis.text.y=element_blank(), axis.ticks.y = element_blank(), axis.text.x = element_text(angle = 90))+
+  ylab("") + xlab("ac_mass in tons")
 
-#num_engs by leess-strike-than-seen (MOSAIC)
+#num_engs by less-strike-than-seen (MOSAIC)
 seen_vs_strike_num_engs <- ggplot(seen_vs_strike[!is.na(seen_vs_strike$num_engs),]) +
   geom_mosaic(aes(x=product(num_engs), fill=less_strike_than_seen)) +
   scale_fill_manual(values = color_pal_TF)+
   theme(legend.position="none", axis.text.y=element_blank(),axis.ticks.y = element_blank())+
   ylab("")
 
-seen_vs_strike_phase + seen_vs_strike_ac_mass / seen_vs_strike_num_engs
+seen_vs_strike_phase
+```
+```{r echo=FALSE, fig.asp=0.35}
+seen_vs_strike_ac_mass + seen_vs_strike_num_engs
 ```
 
 For the left barplot we observe a similar relationship compared to the plot of number of collisions by flight phases from chapter 3.1.1, over the start, middle and landing of the flight. The proportion of less strikes is increasing from the start of the flight (Take-Off Run) and reaches the highest proportion of 0.69 in the phase "En Route" and then decreases again, where it reaches a minimum of 0.48 in the last phase "Landing Roll". So we see again, that the angle of the flight must have an influence on striking less birds than seen.
@@ -639,15 +644,17 @@ birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ef
 #https://xang1234.github.io/mosaicdiagrams/
 
 #mosaic plot better than barplot visualizes also absolute differences
-birds_effect_acmass <- ggplot(birds[!is.na(birds$ac_mass) & !is.na(birds$effect),]) +
-  geom_mosaic(aes(x = product(ac_mass), fill=effect)) +
+birds_effect_acmass <- ggplot(birds[!is.na(birds$ac_mass_renamed) & !is.na(birds$effect),]) +
+  geom_mosaic(aes(x = product(ac_mass_renamed), fill=effect)) +
   scale_fill_brewer(palette="OrRd") +
   theme(legend.position="none", 
         axis.text.y=element_blank(), 
+        axis.text.x = element_text(angle =90),
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank()) +
   theme.title+
-  labs(subtitle = "Effect by aircraft mass")
+  labs(subtitle = "Effect by aircraft mass") +
+  xlab("ac_mass in tons")
 
 #birdds_seenYes by effect
 birds_effect_seenYes <- ggplot(birds[!is.na(birds$effect),]) +
@@ -659,7 +666,8 @@ birds_effect_seenYes <- ggplot(birds[!is.na(birds$effect),]) +
         axis.ticks.y = element_blank(),
         axis.title.y = element_blank()) +
   theme.title+
-  labs(xlab= "birds seen?", subtitle = "Effect by birds seen or not")
+  labs(subtitle = "Effect by birds seen or not") +
+  xlab("birds_seen = YES")
 
 birds_struck_effect
 
@@ -780,12 +788,12 @@ We then also included the variable *ac_mass* to look at:
 
 ``` {r echo=FALSE}
 # Number of collisions per state
-state_plot_df<-birds[birds$birds_struck != "0" & !is.na(birds$birds_struck) & !is.na(birds$state) & !is.na(birds$ac_mass),]
-state_plot_df$ac_mass_renamed<-revalue(as.factor(state_plot_df$ac_mass), 
-     c("1"="2250 kg or less", "2"="2251-5700 kg", "3"="5701-27000 kg", "4"="27001-272000 kg", "5"="above 272000 kg"))
+state_plot_df<-birds[birds$birds_struck != "0" & !is.na(birds$birds_struck) & !is.na(birds$state) & !is.na(birds$ac_mass_renamed),]
+#state_plot_df$ac_mass_renamed<-revalue(as.factor(state_plot_df$ac_mass), 
+     #c("1"="2250 kg or less", "2"="2251-5700 kg", "3"="5701-27000 kg", "4"="27001-272000 kg", "5"="above 272000 kg"))
 state_plot<-ggplot(data = state_plot_df) +
   aes(y = fct_rev(fct_infreq(state)), fill = ac_mass_renamed) + 
-  guides(fill=guide_legend(title="Mass of the aircraft")) + 
+  guides(fill=guide_legend(title="Mass of aircraft in tons")) + 
   scale_fill_brewer(palette="Purples") +
   geom_bar() + 
   labs(title="Number of collisions by State",
@@ -864,7 +872,7 @@ map.bird<-ggplot(state.coll.bird.nonbird, aes(map_id = state)) +
   labs(x = "Longitude", y = "Latitude") +
   theme.title +
   theme(legend.position="bottom") +
-   theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+   theme(axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
   theme(plot.margin=unit(c(5.5,20,5.5,5.5),"points")) +
   coord_fixed(1.3)
 
@@ -877,7 +885,7 @@ map.non.bird<-ggplot(state.coll.bird.nonbird, aes(map_id = state)) +
   theme.title +
   theme(legend.position="bottom") +
   theme(axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank(),
-        axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
+        axis.text.x=element_blank(), axis.ticks.x=element_blank()) +
   theme(plot.margin=unit(c(5.5,5.5,5.5,20),"points")) +
   coord_fixed(1.3)
 
@@ -921,6 +929,7 @@ map.non.bird.prop<-ggplot(is.not.bird.state, aes(map_id = state)) +
 We see that, all in all, the states that have the most bird strucks also have the most non-bird strucks. Though states in the midwest and that do not lie on the coastline have a higher ratio of non-bird collisions than those that do.  
 And, what was already quite obvious in the beginning: There are a lot more aircraft-wildlife collisions with birds than other animals (Over 90%). West Virginia has the lowest ratio of all states with approximately 71.28%. This fits with our findings from earlier where we looked at the most frequent species of that state: The white-tailed deer, which is obviously a non-bird animal, was the most common one during aircraft collisions. Though West Virginia doesn't have the most non-bird collisions in absolute values - this spot is taken by Pennsylvania - it has the most in relation to the total number of collisions of the given state.
 
+\newpage
 
 ## 4.4 Vulture collisions per State
 
@@ -981,7 +990,7 @@ We now use those to investigate the data further.
 
 The number of collisions is used as reference against the different date/time variables and also in regards to the *sky*, the *time_of_day* and the *birds_struck* variable.  
 
-```{r echo=FALSE}
+```{r echo=FALSE, warning=FALSE, message=FALSE, }
 birds.filt<-birds[!is.na(birds$birds_struck),]
 
 # monthly grouping over all years:
@@ -1051,7 +1060,7 @@ tod_plot<-ggplot(birds.filt[!is.na(birds.filt$time_of_day),]) +
   geom_bar(position="fill") +
   scale_x_discrete(labels=xlabels)
 ```
-```{r echo=FALSE, fig.asp=0.5}
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.asp=0.5}
 (sky_month_plot + tod_plot)
 ```
 
@@ -1059,7 +1068,7 @@ We can observe that the *sky* variable changes depending on the month: There is 
 We also see that there are less collisions during the night in the summer. One possible explanation here could be that, at least in the U.S., during summer days are longer and it gets darker later. This would also match with the observation we made jut before with the *sky* variable. There are correspondingly also more collisions during the day in the summer which could also be because there are more flights happening compared to thee winter time. Therefore the probability of more collisions is higher then, too.  
 So just based on this dataset alone we can also see changes in the weather depending on the season.  
 
-```{r echo=FALSE, fig.asp=1.0}
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.asp=1.0}
 (month_plot / woy_plot) / (week_plot + half.year.plot)
 ```
 
@@ -1073,7 +1082,7 @@ We also examined the proportional number of collisions based on the different we
 
 For the **grouping over the years** we will again use the *struck_num* variable from earlier which was based on the *birds_struck* column. We sum up the number of strucked birds/wildlife for each year and display this in a line/point plot. We also do the same again but also divided by each month. Both plots are displayed below. 
 
-```{r echo=FALSE, fig.asp=0.8}
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.asp=0.8}
 birds$struck_num<-unclass(birds$birds_struck)
 birds$struck_num <- mapvalues(birds$struck_num, 
                                      from=c(1,2,3,4,5), 
@@ -1109,13 +1118,15 @@ coll.year / coll.year.month
 We again see that for almost all years there is an increase in strucked birds in the fall and less collisions in the first half of the year. The reasons for this are the same as above. With each year the number of collisions increases. However, the result for the years "1998" and "1999" are quite low compared to the previous years. After some research we found there was no valid reason for this observation as normally wildlife strikes tend to increase over time like as we have seen with the previous years. Therefore we assume that, at least in this dataset, for the years "1998" and "1999" there are data/reports missing. Especially since the number of collisions for 1999 in total is very close to 0 which is very unlikely to be real. When looking at the documentation of the Birds dataset [@birds_doc] it also says data from 1999 to 1997. So this is another indicator supporting the claim.  
 Apart from this, our observation fit with general information that can be found with other sources [@wiki]: Wildlife strikes increase with each year and within a year there are more collisions during the fall/bird migration months.
 
+\newpage
+
 ## 5.4 Hawk collisions over Time and by State
 
 Finally, we pick a wildlife species as example: We want to investigate whether we can see changes for **hawk collisions depending on the season (summer/winter)** and also if there are any significant observations when we also look at the **location**.  
 To do this we look for all entries in the dataset where hawks were involved, so where "hawk" appears in *species*. We then divide the data into two dataframes: One where the month is >= 4 and < 10 (so the summer months from April to September) and the other one with the remaining entries.
 For each set we look at the *state* variable too see if the number of strikes changes depending on location. (We again use the *struck_num* variable from earlier.) The values shown are the proportional hawk strikes, so e.g. the hawk strikes in summer in relation to the total hawk strikes per state.  
 
-```{r echo=FALSE, fig.asp=1.0}
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.asp=1.0}
 birds.with.statenames<-merge(x = birds.filtered.struck.num, y = df.state, by.x = "state", by.y = "state.abb")
 
 is.hawk<-grepl("HAWK", birds.with.statenames$species)
