@@ -233,7 +233,7 @@ top50 <- machines[order(-machines$n)[1:50],] %>%
 top50_aircrafts_wordcloud <- ggplot(top50) +
   aes(label = atype, size=n, color=ac_mass)+#, angle=angle) +
   geom_text_wordcloud_area(
-    mask = png::readPNG(source="flugzeug6-3.png"),
+    #mask = png::readPNG(source="flugzeug6-3.png"),
     #mask = png::readPNG(source="/Users/Vy/Documents/R_Projects/Data_Visualization/flugzeug6-3.png"),
     rm_outside = TRUE) +
   scale_size_area(max_size = 3) +
