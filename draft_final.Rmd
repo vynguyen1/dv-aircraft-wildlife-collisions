@@ -321,7 +321,7 @@ In the following analysis we will go more into detail about the different condit
 The following plot on the left shows the amount of birds struck out birds_seen. On the top right we can see the amount of collisions by each phase of flight and on the bottom right we can see the amount of collisions by time of day. For coloring we use the birds_struck variable.
 
 ```{r echo=FALSE, fig.asp=0.5}
-birds_strike_phase <- ggplot(birds[!is.na(birds$phase_of_flt) & !is.na(birds$birds_struck),]) +
+birds_strike_phase <- ggplot(birds[!is.na(birds$phase_of_flt) & !is.na(birds$birds_struck) & as.integer(birds$phase_of_flt)>2,]) +
   aes(x = phase_of_flt, fill=birds_struck) +
   scale_fill_brewer(palette="Blues") +
   geom_bar() +
@@ -351,8 +351,8 @@ birds_strike_time <- ggplot(birds[!is.na(birds$time_of_day) & !is.na(birds$birds
 ### Birds struck out of birds seen
 birds_struck_seen <- ggplot(birds[!is.na(birds$birds_seen) & !is.na(birds$birds_struck),]) +
   geom_mosaic(aes(x = product(birds_struck,birds_seen), fill=birds_struck)) +
-  scale_fill_brewer(palette="Blues") +
-  #scale_fill_manual(values=brewer.pal(5,"Blues"))+
+  #scale_fill_brewer(palette="Blues") +
+  scale_fill_manual(values=c("#EFF3FF","#BDD7E7","#6BAED6","#3182BD","#08519C"))+
   theme(
     axis.text.y=element_blank(), 
         axis.title.y=element_blank(),
@@ -400,7 +400,7 @@ birds_struck_minorities$birds_struck <- droplevels(birds_struck_minorities$birds
 birds_strike_ac_mass <- ggplot(birds_struck_minorities)+
 aes(x=ac_mass, fill=birds_struck)+
   #scale_fill_manual(values=c("#eff3ff", "#3182bd", "#08519c")) +
-  scale_fill_manual(values=brewer.pal(5,"Blues")[c(1,4,5)]) +
+  scale_fill_manual(values=brewer.pal(6,"Blues")[c(1,4,5)]) +
   geom_bar(position = "fill") +
   geom_text(aes(label=ifelse(round(..count../ac_struck_sums[1:14],2) > 0.1,round(..count../ac_struck_sums[1:14],2) , "")),
             stat='count',
@@ -423,6 +423,7 @@ From the plot on the left we can see that with **increasing number of birds_stru
 On the right side we can see a subset of the birds_struck groups, which focuses on the minor categories in our dataset. From that we can see that the aircraft mass has an influence on the amount of birds struck. For the lightest aircraft class up to 2250 kg the proportion of 0 birds struck is very high, which means that the pilot has seen a bird and was likely to hit one, but he did not. For this category we would expect that lighter machines are able to initiate evasive maneuvers as they are more agile. The relationship of striking less birds than seen will be analyzed more in detail in chapter 3.3. 
 It also stands out, that the proportion of striking over 100 birds is significantly higher for the heaviest aircrafts above 272000 kg. This will most likely be due to the fact that heavier machines are also larger in size and thus they will hit more birds when flying through a flock of birds compared to lighter and thus smaller machines.
 
+\newpage
 ### 3.1.1 Height of collisions above ground
 
 We will now have a look on the height variable together with phase of flight. The top plot shows a boxplot of height for flight phases, which are above ground. We defined Climb, En Route, Descent, Approach as phases which are above ground level. On the bottom plot we will then have a closer look on the height for the flight phases "En Route" and "Descent" by visualizing the density.
@@ -489,6 +490,7 @@ density
 
 The density plot shows that the probability for striking a bird is highes near ground level. This plot shows a **very steep and narrow peek at the beginning at about 100 foot** for all categories of birds_struck greater 0. So most of the collisions happen near ground level, which we have already seen at the beginning of chapter 3.1.1 that the flight phases Take-Off, Climb, Approach and Landing Roll have the highest number of strikes (see 3.1 Number of collisions by pflight phase). For birds_struck=0 the distribution is a little bit different from the others with a density of about 0.0016 from 200 foot to 500 foot. Remarkable is also the **peek for "Over 100" birds struck at a height of about 1800 foot**. For the "Over 100" category we have the lowest amount of observations in the dataset but nevertheless 4 out of 8 strikes happened here. So for this category we have the about the same probability of hitting birds near ground level and at about 1800 foot. One of the involved species here was a **flock of about 500 gulls**. Unfortunately the other observations had missing values in the variable "species", so we can not get more information about the species involved.
 
+\newpage
 ## 3.2 Analysis of birds seen
 
 There originally were only two levels in the data available for birds seen and we added one level for the missing values. The two plots at the top show the proportion of birds seen by the time of day (left plot) and the cloudiness of the sky (right plot). At the bottom you can see two spineplots that show the two continuous variables height and speed by the number of birds seen. 
@@ -544,6 +546,7 @@ Sky: The proportion of **wildlife seen increases with cloudiness**. This is a **
 
 From the spineplots we can see again that it is less likely to see birds before a collision, but the higher the speed & height, its becoming even less likely to see birds before a collision. For height greater 2000 foot and for speed greater 140 knots, the probability to see birds before a collision decreases.
 
+\newpage
 ## 3.3 Influences when number of birds struck is less than birds seen
 
 In the following we will have a closer look on a self-generated variable, which compares the amount of birds seen with the amount of birds_struck. It will be true if the number of birds struck is smaller than birds seen and false if not. In the beginning (chapter 3.1.1) we have already seen, that the number of birds_seen does not always infer that the same amount of birds were struck. By using this variable, we want to have a look at what influences the proportion of striking less birds than seen.
@@ -607,12 +610,13 @@ For the left barplot we observe a similar relationship compared to the plot of n
 The number of engines and aircraft mass also have an influence of how much birds are hit out of the birds seen.
 Lighter machines and machines with less engines tend to hit less wildlife out of the seen wildlife. This might be again due to better maneuverability of the lighter and thus smaller aircrafts. Most prominent are aircrafts with ac_mass = 4 (27001-272000 kg) and two engines which matches also with the findings of the unique aircraft models from chapter 2.
 
+\newpage
 ## 3.4 Analysis of effect variable
 
 The description of the effect variable from the dataset is insifficient. We can not really find out what is meant by the effect variable. Does for example "Precautionary landing" and "Aborted take-off" mean that the pilot did this to prevent striking birds, or did he had to do this because of the collision. We interpreted this variable as it really is the effect on the aircraft because a collision has occurred.
 The top plot shows the different proportions of effect for each category of birds_struck. The Bottom left plot shows the proportions of each effect by the aircraft mass and on the bottom right we compare effect with birds_seen or not seen. 
 
-```{r echo=FALSE, fig.asp=0.5}
+```{r echo=FALSE, fig.asp=0.3}
 
 effect_strike_sums <- rep(addmargins(table(birds$effect, birds$birds_struck),1)[6,],each=5)
 
@@ -657,8 +661,11 @@ birds_effect_seenYes <- ggplot(birds[!is.na(birds$effect),]) +
   theme.title+
   labs(xlab= "birds seen?", subtitle = "Effect by birds seen or not")
 
-birds_struck_effect / (birds_effect_acmass + birds_effect_seenYes)
+birds_struck_effect
 
+```
+```{r echo=FALSE, fig.asp=0.35}
+(birds_effect_acmass + birds_effect_seenYes)
 ```
 
 The greater the number of birds struck, the more likely that the collision has an effect on the aircraft. Especially the proportion of "Precautionary Landing" increases. For birds_struck 0 we have very small proportion of "None" effect and high proportion of "Other" and "Aborted Take-off", which makes sense, because the pilot had to intervene somehow to prevent the collision. For the aircraft mass, we can see that the larger the aircraft mass the less likely the collision has an effect on the aircraft. This might be due to the fact, that heavier machines are more robust. But for aircraft with an mass=5 (greater 272000 kg) we can see a an increase in the proportion of effect, which might be due to the fact that these machines have a higher probability to strike over 100 birds, which will then also have an effect on the most robust aircrafts.
