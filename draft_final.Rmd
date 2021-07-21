@@ -173,9 +173,12 @@ For the states we found that using a map for visualization worked very well, for
   
 ## 1.3 Handling missing values
 
-*birds_struck*: We are using the *remarks* variable to check for spare parts/hints in text from which we can determine that no wild life has been struck. By doing this we were able to decrease the missing values by 19 (from 39 to 20).
+There were no missing values for the following variables: atype, birds_seen, date, operator, opid and species.
 
+*birds_struck*: We are using the *remarks* variable to check for spare parts/hints in text from which we can determine that no wild life has been struck. By doing this we were able to decrease the missing values by 19 (from 39 to 20).
 *birds_seen*: We assume that missing values in the *birds_seen* variable indicate that the pilot did not see wildlife before the strike occurred. Thus, we set all *NA* values in the *birds_seen* variable as *None*. This leads to `r sum(is.na(birds$birds_seen))` values which are set as *None*.
+
+The following barplot shows the amount of missing values for each of the variables, that had missing values.
 
 ```{r echo=FALSE, message=FALSE, fig.asp=0.4}
 #get rows where birds struck is missing
@@ -196,11 +199,15 @@ missing_df <- data.frame("column" = names(missing),
                          "count" = missing, row.names = NULL)
 names(missing_df)[2] <- "count"
 
-ggplot(missing_df) + 
+cols_missings <- c("speed", "effect", "sky", "height", "remarks", "time_of_day", "phase_of_flt", "num_engs", "ac_mass", "state", "birds_struck")
+
+ggplot(missing_df[missing_df$column %in% cols_missings,]) + 
   aes(x=reorder(column, -count), y=count) +
   geom_bar(stat="identity", fill="snow3") +
+  theme.title+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        axis.title.x = element_blank())
+        axis.title.x = element_blank())+
+  labs(subtitle = "Amount of missing values by variable")
 ```
 
 \newpage
@@ -388,7 +395,8 @@ birds_strike_sky <- ggplot(birds[!is.na(birds$sky) & !is.na(birds$birds_struck),
             stat='count',
             size = 2.3,
             position=position_fill(vjust = 0.5))+
-  theme(axis.text.x = element_text(angle = 90)) +
+  theme(axis.text.x = element_text(angle = 90),
+        axis.title.y = element_blank()) +
   theme.title+
   labs(title = "Birds struck comparisons",
        subtitle = "Cloudiness by birds struck")
@@ -410,7 +418,8 @@ aes(x=ac_mass_renamed, fill=birds_struck)+
   theme.title+
   labs(subtitle = "Birds struck (subset) by aircraft mass") + 
   xlab("ac_mass in tons") + 
-  theme(axis.text.x = element_text(angle = 90))
+  theme(axis.text.x = element_text(angle = 90),
+        axis.title.y = element_blank())
 
 #birds_strike_ac_mass <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ac_mass),]) +
 #  aes(x=ac_mass, fill=birds_struck)+
@@ -494,7 +503,7 @@ density
 #above_ground[above_ground$height>1500 & above_ground$height < 2000 & above_ground$birds_struck=="Over 100",]
 ```
 
-The density plot shows that the probability for striking a bird is highest near ground level. The density starts with a **very steep and narrow peek at the beginning at about 100 foot** for all categories of birds_struck greater 0. So most of the collisions happen near ground level, which we have already seen at the beginning of chapter 3.1.1 that the flight phases near ground level (Take-Off, Climb, Approach and Landing Roll) have the highest number of strikes (see 3.1 Number of collisions by flight phase). For *birds_struck* equal to 0 the distribution is a little bit different from the others with a density of about 0.0016 from 200 to 500 foot. Remarkable is also the **peek for "Over 100" birds struck at a *height* of about 1800 foot**. For the "Over 100" category we have the lowest amount of observations in the dataset but nevertheless 4 out of 8 strikes happened here. So for this category we have the same probability of hitting birds near ground level and at about 1800 foot. One of the involved species here was a **flock of about 500 gulls**. Unfortunately the other observations had missing values in the variable "species", so we can not get more information about the species involved.
+The density plot shows that the probability for striking a bird is highest near ground level. The density starts with a **very steep and narrow peek at the beginning at about 100 foot** for all categories of birds_struck greater 0. So most of the collisions happen near ground level, which we have already seen at the beginning of chapter 3.1.1 that the flight phases near ground level (Take-Off, Climb, Approach and Landing Roll) have the highest number of strikes (see 3.1 Number of collisions by flight phase). For *birds_struck* equal to 0 the distribution is a little bit different from the others with a density of about 0.0016 from 200 to 500 foot. Remarkable is also the **peek for "Over 100" birds struck at a *height* of about 1800 foot**. For the "Over 100" category we have the lowest amount of observations in the dataset but nevertheless 4 out of 8 strikes happened here. So for this category we have the same probability of hitting birds near ground level and at about 1800 foot. One of the involved species here was a **flock of about 500 gulls**. Unfortunately the other observations had no information about the *species* that were involved in the collision.
 
 \newpage
 ## 3.2 Analysis of birds seen
@@ -539,15 +548,14 @@ birds_seen_plt + birds_seenNo_sky
 ```{r echo=FALSE, fig.asp=0.4, fig.width = 7, fig.show="hold", fig.align = 'center'}
 par(mfrow=c(1,2))
 spineplot(birds$height, birds$birds_seen, ylab="", yaxlabels = "", xlab = "", col = rev(brewer.pal(n=3,name="BuGn")))
-title(main = "Birds seen by height", cex.main=0.8, font.main= 3, col.main = "gray50", line = 0.5)
+title(main = "Proportion of birds seen by height", cex.main=0.8, font.main= 3, adj=0, col.main = "gray50", line = 0.5)
 mtext(text = "height in foot",
       side = 1,#side 1 = bottom
       line = 2)
 
 spineplot(birds$speed, birds$birds_seen,ylab="",yaxlabels = "", xlab = "",
           col = rev(brewer.pal(n=3,name="BuGn")))
-title(main = "Birds seen by speed", cex.main=0.8, font.main= 3, col.main = "gray50",line = c(0.5))
-#title(xlab="speed", line=4, cex.lab=1.2, family="Calibri Light")
+title(main = "Proportion of birds seen by speed", cex.main=0.8, font.main= 3, adj=0, col.main = "gray50",line = c(0.5))
 mtext(text = "speed in knots",
       side = 1,#side 1 = bottom
       line = 2)
@@ -653,9 +661,10 @@ birds_struck_effect <- ggplot(birds[!is.na(birds$birds_struck) & !is.na(birds$ef
             size = 3,
             position=position_fill(vjust = 0.5))+
   theme.title+
+  theme(axis.title.y = element_blank())+
   labs(
     title = "Variables influencing effect",
-    subtitle = "Effect by number of birds struck"
+    subtitle = "Proportion of effect by number of birds struck"
   )
 
 #mosaic in ggplot2
