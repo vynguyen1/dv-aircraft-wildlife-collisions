@@ -338,7 +338,7 @@ birds_strike_phase <- ggplot(birds[!is.na(birds$phase_of_flt) & !is.na(birds$bir
         axis.title = element_text(vjust=-10),
         axis.title.y=element_blank(),
         axis.title.x=element_blank(),
-        plot.subtitle = element_text(hjust =4)) +
+        plot.subtitle = element_text(hjust =2)) +
   labs(xlab = "phase of flight",
        subtitle = "Number of collisions by phase of flight")
 
@@ -352,7 +352,7 @@ birds_strike_time <- ggplot(birds[!is.na(birds$time_of_day) & !is.na(birds$birds
   theme(legend.position="none",
         axis.title.y=element_blank(),
         axis.title.x=element_blank(),
-        plot.subtitle = element_text(hjust =3)) +
+        plot.subtitle = element_text(hjust =2)) +
   labs(xlab = "",
        subtitle = "Number of collisions by time of day     ")
 
