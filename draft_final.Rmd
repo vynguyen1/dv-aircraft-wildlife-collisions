@@ -106,7 +106,7 @@ birds$birds_seen <- factor(birds$birds_seen, levels=factor_seen)
 
 # Introduction
 
-In this paper we want to investigate a dataset of aircraft-wildlife collisions in the U.S. in the 90s. We start by introducing the data and some steps we took regarding data preparation.
+In this paper we want to investigate a dataset of aircraft-wildlife collisions in the U.S. from the 90s. We start by introducing the data and some steps we took regarding data preparation.
 For our analysis we then first take a look at what kind of aircrafts are frequently involved in bird/wildlife strikes. After that we examine what kind of circumstances lead to such collisions and if there are any dependencies between certain variables.
 In the following chapter we then also take location into account to analyze if this has any influence on the kind of wildlife involved in the collisions.
 For the last research topic we focus on the time variable and put that in relation to the previous results.
@@ -153,9 +153,9 @@ There are also some missing values which we will look at later.
 ## 1.2 Preparation
 
 #### Data Preparation: 
-Cleaning *birds_seen* variable: The 9412th observation had one wrong entry in the *birds_seen* variable which has been replaced with *NA*, because we did not want to introduce a new level for one entry.
+Cleaning *birds_seen* variable: The 9412th observation had one wrong entry in the *birds_seen* variable which has been replaced with a *NA* value, because we did not want to introduce a new level for one entry.
 
-Factor Levels: The factor levels of the following variables have been ordered for visualization purposes.
+Factor Levels: The factor levels of the following variables have been (re-)ordered for visualization purposes.
 
 * Order from low to high: 
   + birds_struck
@@ -175,12 +175,12 @@ For the states we found that using a map for visualization worked very well, for
 
 There were no missing values for the following variables: atype, birds_seen, date, operator, opid and species.
 
-*birds_struck*: We are using the *remarks* variable to check for spare parts/hints in text from which we can determine that no wild life has been struck. By doing this we were able to decrease the missing values by 19 (from 39 to 20).
+*birds_struck*: We are using the *remarks* variable to check for spare parts/hints in text from which we can determine that no wild life has been struck. By doing this we were able to decrease the missing values by 19 (from 39 to 20). \
 *birds_seen*: We assume that missing values in the *birds_seen* variable indicate that the pilot did not see wildlife before the strike occurred. Thus, we set all *NA* values in the *birds_seen* variable as *None*. This leads to `r sum(is.na(birds$birds_seen))` values which are set as *None*.
 
-The following barplot shows the amount of missing values for each of the variables, that had missing values.
+The following barplot shows the amount of missing values for each of the variables that had missing values.
 
-```{r echo=FALSE, message=FALSE, fig.asp=0.4}
+```{r echo=FALSE, message=FALSE, fig.asp=0.35}
 #get rows where birds struck is missing
 df <- birds[is.na(birds$birds_struck), 
             c("remarks", "birds_seen", "effect", "birds_struck")]
@@ -302,7 +302,7 @@ p <- ggplot(machines[!is.na(machines$num_engs) & !is.na(machines$ac_mass),]) +
 p + facet_grid(. ~ num_engs)
 ```
 
-From the plot we can see, that again higher *max_speed* causes higher *max_height* and most of the aircraft models have two engines. Interesting is that for aircrafts with one engine, there is no model with a speed greater 200 knots and height greater 10000 foot. So we could conclude from that this is the maximum height and speed possible for aircrafts with one engine. We can also see that lighter machines tend to have less engines:
+From the plot we can see, that again higher *max_speed* causes higher *max_height* and most of the aircraft models have two engines. Interesting is that for aircrafts with one engine, there is no model with a speed greater 200 knots and height greater 10000 foot. So we could conclude from that, that this is the maximum height and speed possible for aircrafts with one engine. We can also see that lighter machines tend to have less engines:
 
 * first group includes nearly only machines with aircraft mass less than 2250 kg, 
 * second group is mixed with aircraft mass between 2251-272000 kg, 
@@ -375,9 +375,9 @@ birds_struck_seen + birds_strike_phase / birds_strike_time
 ## descent and en-route are about equal 
 ```
 
-The mosaicplot shows that the largest group of birds seen is "None" followed by "2-10" and "11-100". So **most often we do not see birds before a strike** happens and most often only 1 bird is struck. But if the pilot sees something, than according to the data he only sees birds in groups, where larger groups of birds are less likely than smaller ones. If the pilot sees birds, **quite often less birds were hit than seen**. For example if the pilot sees 2-10 birds, he hits about 40% of the time less birds and for the group *birds_seen* between 11-100, about 85% of the time the pilot hits less birds than seen. The event of hitting less birds than seen will later be analyzed more in detail in chapter 3.3.
+The mosaicplot shows that the largest group of birds seen is "None" followed by "2-10" and "11-100". So **most often we do not see birds before a strike** happens and most often only 1 bird is struck. But if the pilot sees something, then according to the data he only sees birds in groups, where larger groups of birds are less likely than smaller ones. If the pilot sees birds, **quite often less birds were hit than seen**. For example if the pilot sees 2-10 birds, he hits about 40% of the time less birds and for the group *birds_seen* between 11-100, about 85% of the time the pilot hits less birds than seen. The event of hitting less birds than seen will later be analyzed more in detail in chapter 3.3.
 
-The top right plot shows that collisions mostly occur at the beginning and end of a flight in phases Take-Off, Climb, Approach and Landing Roll. The amount of collision in Approach phase is highest and about 2 times higher than the other start and end phases. During the middle of the flight in phases "En Route" and "Descent" less collisions occur.
+The top right plot shows that collisions mostly occur at the beginning and end of a flight in phases Take-Off, Climb, Approach and Landing Roll. The number of collisions in the Approach phase is the highest and about 2 times higher than in the other start and end phases. During the middle of the flight in phases "En Route" and "Descent" less collisions occur.
 
 From the bottom right plot we can see that strikes happen most often during the day with over 10500 collisions followed by night with about 4500. Interesting to see is that strikes with larger groups of birds (11-100) happen mostly during the day (small values are not visible in the plot).
 
@@ -469,9 +469,9 @@ height_by_phase / density
 ```
 
 The height distribution for "Climb" and "Approach" are very similar and their medians are very close to the ground. 
-The other two boxplots for "En Route" and "Descent" are more far away from ground and show more variance in the data. Thus, we will focus on these two. Interesting here is that the 25% quantile of the "Descent" boxplot is above the one from "En Route", same for the median and 75% quantile. We will investigate more the differences of the two distributions by using a density plot.
+The other two boxplots for "En Route" and "Descent" are more far away from the ground and show more variance in the data. Thus, we will focus on these two. Interesting here is that the 25% quantile of the "Descent" boxplot is above the one from "En Route", same for the median and 75% quantile. We will investigate more the differences of the two distributions by using a density plot.
 
-Both flight phases have the highest density for lower heights up to about 5000 foot. The curve for "En Route" is much steeper, but a little more narrow compared to "Descent". Both density cross at about 3750 foot, which is the highest point of "Descent" phase. From that height upwards the probability to strike a birds is higher when being in "Descent" phase. This will be most likely because of the angle of the aircraft at which it is flying. In phase "En Route" it will be most likely parallel to the ground, so the height of the airplane does not change much during that phase, but in "Descent" phase the aircraft has an negative angle and is loosing height to prepare for example for "Approach" phase.
+Both flight phases have the highest density for lower heights up to about 5000 foot. The curve for "En Route" is much steeper, but a little more narrow compared to "Descent". Both density cross at about 3750 foot, which is the highest point of "Descent" phase. From that height upwards the probability to strike a birds is higher when being in "Descent" phase. This will be most likely because of the angle of the aircraft at which it is flying. In phase "En Route" it will be most likely parallel to the ground, so the height of the airplane does not change much during that phase, but in "Descent" phase the aircraft has an negative angle and is loosing height to prepare, for example, for "Approach" phase.
 
 We are performing a t-test to compare the two group heights ("Descent" and "En Route"), so that we can confirm that both distributions are not equal.
 
@@ -480,7 +480,7 @@ We are performing a t-test to compare the two group heights ("Descent" and "En R
 t.test(height~phase_of_flt, data = birds[as.integer(birds$phase_of_flt)>4 & as.integer(birds$phase_of_flt)<7 & !is.na(birds$phase_of_flt),])
 ```
 
-The t-test also shows that the **group means are different** from each other, because the p-value is less than 5% or even 1% level. The **mean in group "Descent" is higher** than mean of "En Route". One would actually expect that the height is smaller than in "En Route" because the Descent phase happens after the "En Route" phase, where the aircraft is loosing height to prepare for approach or during flight in general. So since all aircrafts mostly have to be in the phase "En Route" before going over to "Descent" we can say that it is more likely to hit a bird in greater height (greater 3750 foot) when being in phase "Descent" rather than in "En Route". The main difference between these flight phases is that the aircraft is not flying parallel to the ground when being in phase "Descent". So the **angle of the aircraft during the flight is most likely having an influence on hitting birds**. And especially a negative angle increases the probability of hitting birds, based on the findings here and from chapter 3.1.1 where we found out, that the "Approach" phase has the highest amount of strikes.
+The t-test also shows that the **group means are different** from each other, because the p-value is less than 5% or even 1% level. The **mean in group "Descent" is higher** than mean of "En Route". One would actually expect that the height is smaller than in "En Route" because the Descent phase happens after the "En Route" phase, where the aircraft is loosing height to prepare for approach or during flight in general. So since all aircrafts mostly have to be in the phase "En Route" before going over to "Descent" we can say that it is more likely to hit a bird in greater height (greater 3750 foot) when being in phase "Descent" rather than in "En Route". The main difference between these flight phases is that the aircraft is not flying parallel to the ground when being in phase "Descent". So the **angle of the aircraft during the flight is most likely having an influence on hitting birds**. And especially a negative angle increases the probability of hitting birds, based on the findings here and from chapter 3.1.1 where we found out that the "Approach" phase has the highest number of strikes.
 
 ### 3.1.2 Density of height by birds_struck for flight phases above ground 
 
@@ -882,7 +882,7 @@ bird_wordcloud + non_bird_wordcloud
 We again can observe what we already saw earlier in the barplot for the most frequent species in general: The most frequent birds are unknown, but also gulls and a loth of other bird types can be found hee again. For the non-bird wildlife we see the white-tailed deer again which is, by far, the most frequent one in this category (visualized by the size of the word), followed by coyotes, mule deers and foxes.  
 
 Next, we want to find out if there's a difference in bird and non-bird collisions depending on what state the aircraft is in. To do this, we displayed the number of collisions and used the *is.bird* variable we created to divide the data. This is visualized in the maps below:
-The left column shows the bird collisions, thr right one the non-bird ones. The upper maps show the ratio, so the proportion of bird/non-bird collisions and total collisions by state. The two bottom maps show the absolute values, so the number of collisions by state, for bird and non-bird encounters.  
+The left column shows the bird strikes, the right one the non-bird ones. The upper maps show the ratio, so the proportion of bird/non-bird collisions in relation to total collisions by state. The two bottom maps show the absolute values for bird and non-bird encounters.  
 
 ``` {r echo=FALSE, fig.asp=0.8}
 state.coll.bird.nonbird<-as.data.frame.matrix(table(birds.with.statenames.filt$state.name, birds.with.statenames.filt$is.bird))
@@ -953,7 +953,7 @@ map.non.bird.prop<-ggplot(is.not.bird.state, aes(map_id = state)) +
 (map.bird.prop + map.non.bird.prop) / (map.bird + map.non.bird)
 ```
 
-We see that, all in all, the states that have the most bird strucks also have the most non-bird strucks. Though states in the midwest and that do not lie on the coastline have a higher ratio of non-bird collisions than those that do.  
+We see that, all in all, the states that have the most bird strikes also have the most non-bird strikes. Though states in the midwest and ones that do not lie on the coastline have a higher ratio of non-bird collisions than those that do.  
 And, what was already quite obvious in the beginning: There are a lot more aircraft-wildlife collisions with birds than other animals (Over 90%). West Virginia has the lowest ratio of all states with approximately 71.28%. This fits with our findings from earlier where we looked at the most frequent species of that state: The white-tailed deer, which is obviously a non-bird animal, was the most common one during aircraft collisions. Though West Virginia doesn't have the most non-bird collisions in absolute values - this spot is taken by Pennsylvania - it has the most in relation to the total number of collisions of the given state.
 
 \newpage
